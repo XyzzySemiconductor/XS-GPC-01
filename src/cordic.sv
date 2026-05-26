@@ -20,23 +20,21 @@ module cordic_sincos_50000_core_20 (
 
     logic signed [15:0] atan_table [0:14];
 	initial begin
-		atan_table = '{
-        16'sd6250,   // i=0
-        16'sd3694,   // i=1
-        16'sd1948,   // i=2
-        16'sd989,    // i=3
-        16'sd497,    // i=4
-        16'sd249,    // i=5
-        16'sd125,    // i=6
-        16'sd62,     // i=7
-        16'sd31,     // i=8
-        16'sd16,     // i=9
-        16'sd8,      // i=10
-        16'sd4,      // i=11
-        16'sd2,      // i=12
-        16'sd1,      // i=13
-        16'sd0       // i=14
-    };
+        atan_table[0 ] = 16'sd6250;   // i=0
+        atan_table[1 ] = 16'sd3694;   // i=1
+        atan_table[2 ] = 16'sd1948;   // i=2
+        atan_table[3 ] = 16'sd989;    // i=3
+        atan_table[4 ] = 16'sd497;    // i=4
+        atan_table[5 ] = 16'sd249;    // i=5
+        atan_table[6 ] = 16'sd125;    // i=6
+        atan_table[7 ] = 16'sd62;     // i=7
+        atan_table[8 ] = 16'sd31;     // i=8
+        atan_table[9 ] = 16'sd16;     // i=9
+        atan_table[10] = 16'sd8;      // i=10
+        atan_table[11] = 16'sd4;      // i=11
+        atan_table[12] = 16'sd2;      // i=12
+        atan_table[13] = 16'sd1;      // i=13
+        atan_table[14] = 16'sd0;      // i=14
 	end
 
     // K � 0.607252935 ? 16-bit fixed � 19997, then sign-extend to 19 bits
