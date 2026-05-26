@@ -24,4 +24,86 @@ module tt_um_60hz_load(
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};
 
+	logic start;
+	logic [15:0] angle;
+	logic [15:0] sin_out, cos_out;
+	logic valid, busy;
+	cordic_sincos_50000_core_20 i_dut(
+		.clk( clk ),
+		.rst( reset ),
+		.start( start ),
+		.angle_in( angle ),
+		.sin_out ( sin_out ),
+		.cos_out ( cos_out ),
+		.valid( valid ),
+		.busy( busy )
+	);
+		
+
+	// Test
+
+	// start pulse every 16 cycles
+	logic [3:0] pcnt;
+	always @(posedge clk) begin
+		pcnt <= ( reset ) ? 0 : pcnt+1;
+		start <= ( reset ) ? 0 : ( pcnt == 0 ) ? 1 : 0;
+	end
+
+	// Count angle every start pulse (-25000 to 24999 )
+    	// at 3Mhz (48Mhz/16) this gives us exactly 60 Hz grid freq
+
+	logic polarity;
+	always @(posedge clk) begin
+		if( reset ) begin
+			angle <= -12500;
+			polarity <= 0;
+		end else if( start ) begin
+			angle <= ( angle == 12499 ) ? -12500 : angle + 1;
+		    polarity <= ( angle == 12499 ) ? ~polarity : polarity;
+		end
+	end
+
+	// latch and hold sin value when produced
+
+	logic signed [15:0] sin, cos;
+	always @(posedge clk) begin
+		if( reset ) begin
+			sin <= 0;
+			cos <= 0;
+		end else if( valid ) begin
+			sin <= ( polarity ) ? ~sin_out : sin_out;
+			cos <= ( polarity ) ? ~cos_out : cos_out;
+		end
+	end
+
+	// Accumulate error function
+	// and PWM outputs
+
+	logic signed [31:0] sin_err, cos_err;
+	logic sin_pwm_p, sin_pwm_n;
+	logic cos_pwm_p, cos_pwm_n;
+
+	always @(posedge clk) begin
+		if( reset ) begin
+			sin_pwm_p <= 0;
+			sin_pwm_n <= 0;
+			sin_err <= 0;
+			cos_pwm_p <= 0;
+			cos_pwm_n <= 0;
+			cos_err <= 0;
+		end else if( valid ) begin
+			sin_pwm_p <= ( sin_err >  16465 * 12 ) ? 1 : ( sin_err < 0 ) ? 0 : sin_pwm_p;
+			sin_pwm_n <= ( sin_err < -16465 * 12 ) ? 1 : ( sin_err > 0 ) ? 0 : sin_pwm_n;
+			sin_err <= sin_err + sin + ((sin_pwm_p)?-16465:(sin_pwm_n)?16465:0);
+			cos_pwm_p <= ( cos_err >  16465 * 12 ) ? 1 : ( cos_err < 0 ) ? 0 : cos_pwm_p;
+			cos_pwm_n <= ( cos_err < -16465 * 12 ) ? 1 : ( cos_err > 0 ) ? 0 : cos_pwm_n;
+			cos_err <= cos_err + cos + ((cos_pwm_p)?-16465:(cos_pwm_n)?16465:0);
+		end
+ 	end
+
+	assign uo_out[0] = sin_pwm_p;
+	assign uo_out[1] = sin_pwm_n;
+	assign uo_out[2] = cos_pwm_p;
+	assign uo_out[3] = cos_pwm_n;
+
 endmodule
