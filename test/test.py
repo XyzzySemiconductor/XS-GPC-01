@@ -17,7 +17,7 @@ async def test_project(dut):
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
-    dut.ui_in.value = 0
+    dut.ui_in.value = 2
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
@@ -33,18 +33,13 @@ async def test_project(dut):
     assert int(dut.cnt.value) < 810000
     # Check that N & P never intersect
     assert int(dut.cnt_sin_np.value) == 0
-    assert int(dut.cnt_cos_np.value) == 0
 
     # Check that each is approx 1/3 of cnt
     assert int(dut.cnt_sin_p.value) > 250000
     assert int(dut.cnt_sin_n.value) > 250000
-    assert int(dut.cnt_cos_p.value) > 250000
-    assert int(dut.cnt_cos_n.value) > 250000
 
     assert int(dut.cnt_sin_p.value) < 260000
     assert int(dut.cnt_sin_n.value) < 260000
-    assert int(dut.cnt_cos_p.value) < 260000
-    assert int(dut.cnt_cos_n.value) < 260000
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.

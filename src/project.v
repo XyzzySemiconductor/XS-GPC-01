@@ -25,17 +25,34 @@ module tt_um_60hz_load(
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, ui_in, uio_in, 1'b0};
 	
-	logic reset;
+	wire reset;
 	assign reset = !rst_n;
 
-	logic start;
+	// Gate input reg
+	reg gate;
+	always @(posedge clk) 
+		gate <= ( reset ) ? 0 : ui_in[1];
+
+	// ADC Input
+	wire strobe; // 1 cycle pulse every 16 cycles
+	wire [11:0] ad_data; // 2s comp adc input data
+	adc_in i_adc (
+		.clk( clk ),
+		.reset( reset ),
+		.ad_cs( uo_out[2] ),
+		.ad_sdata( ui_in[0] ),
+		.ad_out( ad_data ),
+		.ad_strobe( strobe )
+	);
+
+	// Cordic unit
 	logic [15:0] angle;
 	logic [15:0] sin_out, cos_out;
 	logic valid, busy;
 	cordic_sincos_50000_core_20 i_dut(
 		.clk( clk ),
 		.rst( reset ),
-		.start( start ),
+		.start( strobe ),
 		.angle_in( angle ),
 		.sin_out ( sin_out ),
 		.cos_out ( cos_out ),
@@ -44,70 +61,102 @@ module tt_um_60hz_load(
 	);
 		
 
-	// Test
-
-	// start pulse every 16 cycles
-	logic [3:0] pcnt;
-	always @(posedge clk) begin
-		pcnt <= ( reset ) ? 0 : pcnt+1;
-		start <= ( reset ) ? 0 : ( pcnt == 0 ) ? 1 : 0;
-	end
-
 	// Count angle every start pulse (-25000 to 24999 )
-    	// at 3Mhz (48Mhz/16) this gives us exactly 60 Hz grid freq
+   	// at 3Mhz (48Mhz/16) this gives us exactly 60 Hz grid freq
 
-	logic polarity;
+	reg polarity;
 	always @(posedge clk) begin
 		if( reset ) begin
 			angle <= -12500;
 			polarity <= 0;
-		end else if( start ) begin
-			angle <= ( angle == 12499 ) ? -12500 : angle + 1;
-		    polarity <= ( angle == 12499 ) ? ~polarity : polarity;
+		end else begin
+			if( strobe ) begin
+				angle <= ( angle == 12499 ) ? -12500 : angle + 1;
+		    	polarity <= ( angle == 12499 ) ? ~polarity : polarity;
+			end
 		end
 	end
+	wire half_cycle;
+	assign half_cycle = ( strobe && angle == 12499 ) ? 1'b1 : 1'b0;
 
-	// latch and hold sin value when produced
-
+	// Correct Polarity (just negate)
 	logic signed [15:0] sin, cos;
 	always @(posedge clk) begin
 		if( reset ) begin
 			sin <= 0;
-			cos <= 0;
 		end else if( valid ) begin
-			sin <= ( polarity ) ? ~sin_out : sin_out;
-			cos <= ( polarity ) ? ~cos_out : cos_out;
+			sin <= ( polarity ) ? ~cos_out : cos_out; // use cos as it aligns with polarity
 		end
 	end
 
 	// Accumulate error function
-	// and PWM outputs
-
+	// and gates PWM outputs with
+	// guaranteed min pulse width of 4us
 	logic signed [31:0] sin_err, cos_err;
 	logic sin_pwm_p, sin_pwm_n;
-	logic cos_pwm_p, cos_pwm_n;
 
 	always @(posedge clk) begin
 		if( reset ) begin
 			sin_pwm_p <= 0;
 			sin_pwm_n <= 0;
 			sin_err <= 0;
-			cos_pwm_p <= 0;
-			cos_pwm_n <= 0;
-			cos_err <= 0;
 		end else begin
 			sin_pwm_p <= ( sin_err >  16465 * 12 * 16 ) ? 1 : ( sin_err < 0 ) ? 0 : sin_pwm_p;
 			sin_pwm_n <= ( sin_err < -16465 * 12 * 16 ) ? 1 : ( sin_err > 0 ) ? 0 : sin_pwm_n;
-			sin_err <= sin_err + sin + ((sin_pwm_p)?-16465:(sin_pwm_n)?16465:0);
-			cos_pwm_p <= ( cos_err >  16465 * 12 * 16 ) ? 1 : ( cos_err < 0 ) ? 0 : cos_pwm_p;
-			cos_pwm_n <= ( cos_err < -16465 * 12 * 16 ) ? 1 : ( cos_err > 0 ) ? 0 : cos_pwm_n;
-			cos_err <= cos_err + cos + ((cos_pwm_p)?-16465:(cos_pwm_n)?16465:0);
+			sin_err <= sin_err + ((gate)?sin:0) + ((sin_pwm_p)?-16465:(sin_pwm_n)?16465:0);
 		end
  	end
 
 	assign uo_out[0] = sin_pwm_p;
 	assign uo_out[1] = sin_pwm_n;
-	assign uo_out[2] = cos_pwm_p;
-	assign uo_out[3] = cos_pwm_n;
+
+	// Accumulate error over half wave 
+	// quick/dirty
+
+
+	wire [11:0] delta;
+	assign delta = ( polarity ) ? ad_data - sin[15-:12] : sin[15-:12] - ad_data;
+	reg [31:0] err;
+	always @(posedge clk) begin
+		if( reset ) begin
+			err <= 0;
+		end else begin
+			err <= ( half_cycle ) ? {{20{delta[11]}},delta} : 
+                       ( strobe ) ? {{20{delta[11]}},delta} + err : err;
+		end
+	end
+
+	// Each half cycle update the load duty cycle
+	// if error > thresh, then duty_cycle++, and the opposite
+
+	reg [3:0] duty;
+	always @(posedge clk) 
+		duty <= ( reset ) ? 0 : 
+                ( half_cycle && !err[31] && err[31-:12] != 12'h000 && duty != 15 ) ? duty + 1 :
+                ( half_cycle &&  err[31] && err[31-:12] != 12'hFFF && duty !=  0 ) ? duty - 1 : duty;
+
+    // Use duty cycel to generate load PWM guantee 4us min width
+	// at 48 Mhz,  4 Usec == 192 cyc, or 12 strobve cycles
+	// during a half cycle we have 400K clocks and 25000 strobes
+	// we also have the angle counter from -25000 to 24999 each half cycle
+
+	reg [7:0] outer, inner;
+	reg [3:0] dcount;
+	reg pwm;
+	always @(posedge clk) begin
+		if( reset || half_cycle ) begin
+			outer <= 0;
+			inner <= 0;
+			dcount <= 0;
+			pwm<= 0;
+		end else begin
+			inner <= ( inner == 249 ) ? 0 : inner + 1;
+			dcount<= ( inner == 249 && dcount == 15 ) ? 0 : ( inner == 249 ) ? dcount + 1 : dcount;
+			outer <= ( inner == 249 && dcount == 15 );
+			pwm <= ( inner == 249 ) ? ((duty>dcount)?1'b1:1'b0) : pwm;
+		end
+	end
+
+	assign uo_out[3] = pwm;
 
 endmodule
