@@ -152,7 +152,7 @@ module tt_um_60hz_load(
 		end else begin
 			inner <= ( inner == 249 ) ? 0 : inner + 1;
 			dcount<= ( inner == 249 && dcount == 15 ) ? 0 : ( inner == 249 ) ? dcount + 1 : dcount;
-			outer <= ( inner == 249 && dcount == 15 );
+			outer <= ( inner == 249 && dcount == 15 ) ? outer + 1 : outer;
 			pwm <= ( inner == 249 ) ? ((duty>dcount)?1'b1:1'b0) : pwm;
 		end
 	end
@@ -165,11 +165,14 @@ module tt_um_60hz_load(
     // PWM turns on if acc > 192 * TH, and turns off when acc < 0; give 4us min pulse width
 	// PWM edge placement will have teh 48Mhz resoution (~20ns)
 
-	wire [31:0] thresh, thresh4us;
-	wire [3:0] th_sel;
-	assign thresh    = 2'b01 << (7+th_sel); // ranges from 2^7 to 2^22
-	assign thresh4us = 2'b11 << (13+th_sel);// is 192 * thresh
-    assign th_sel = ui_in[7:4];
+	// Use 4 input bits to provide control over the 4us threshold 
+	reg [31:0] thresh, thresh4us;
+	reg [3:0] th_sel;
+	always @(posedge clk) begin
+    	th_sel 		<= ui_in[7:4]; // register inputs
+		thresh    	<= 2'b01 << (7+th_sel); // ranges from 2^7 to 2^22
+		thresh4us	<= 2'b11 << (13+th_sel);// is 192 * thresh
+	end;
 
 	reg [31:0] fast_acc;
 	wire [31:0] next_acc;
