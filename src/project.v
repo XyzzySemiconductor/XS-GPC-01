@@ -18,7 +18,7 @@ module tt_um_60hz_load(
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out[7:4]  = 0; 
+  assign uo_out[7:5]  = 0; 
   assign uio_out = 0;
   assign uio_oe  = 0;
 
@@ -29,9 +29,9 @@ module tt_um_60hz_load(
 	assign reset = !rst_n;
 
 	// Gate input reg
-	reg gate;
+	reg [1:0] gate;
 	always @(posedge clk) 
-		gate <= ( reset ) ? 0 : ui_in[1];
+		gate <= ( reset ) ? 0 : ui_in[2:1];
 
 	// ADC Input
 	wire strobe; // 1 cycle pulse every 16 cycles
@@ -103,7 +103,7 @@ module tt_um_60hz_load(
 		end else begin
 			sin_pwm_p <= ( sin_err >  16465 * 12 * 16 ) ? 1 : ( sin_err < 0 ) ? 0 : sin_pwm_p;
 			sin_pwm_n <= ( sin_err < -16465 * 12 * 16 ) ? 1 : ( sin_err > 0 ) ? 0 : sin_pwm_n;
-			sin_err <= sin_err + ((gate)?sin:0) + ((sin_pwm_p)?-16465:(sin_pwm_n)?16465:0);
+			sin_err <= sin_err + ((gate[0])?sin:0) + ((sin_pwm_p)?-16465:(sin_pwm_n)?16465:0);
 		end
  	end
 
@@ -158,5 +158,35 @@ module tt_um_60hz_load(
 	end
 
 	assign uo_out[3] = pwm;
+
+	// Accumdulate the delta error (rectified half wave errot)
+	// Have reasonable hard clamps because it can accumulate forever
+	// Run at 48 Mhz, with thresh TH * 192 and PWM when on adds in -TH.
+    // PWM turns on if acc > 192 * TH, and turns off when acc < 0; give 4us min pulse width
+	// PWM edge placement will have teh 48Mhz resoution (~20ns)
+
+	wire [31:0] thresh, thresh4us;
+	wire [3:0] th_sel;
+	assign thresh    = 2'b01 << (7+th_sel); // ranges from 2^7 to 2^22
+	assign thresh4us = 2'b11 << (13+th_sel);// is 192 * thresh
+    assign th_sel = ui_in[7:4];
+
+	reg [31:0] fast_acc;
+	wire [31:0] next_acc;
+	assign next_acc = fast_acc + ((gate[1])?{{24{delta[11]}},delta[11:0]}:0) - ((pwm)?thresh:0);
+	reg fast_pwm;
+	always @(posedge clk) begin
+		if( reset ) begin
+			fast_acc <= 0;
+			fast_pwm <= 0;
+		end else begin
+			fast_acc <= ( next_acc[31:30] == 2'b01 ) ? 32'h3FFF_FFFF :
+                       	( next_acc[31:30] == 2'b10 ) ? 32'hC000_0000 : next_acc;
+			fast_pwm <= ( !fast_acc[31] && fast_acc > thresh4us ) ? 1'b1 : 
+                        (  fast_acc[31]                         ) ? 1'b0 : fast_pwm;
+		end
+	end
+
+	assign uo_out[4] = fast_pwm;
 
 endmodule
