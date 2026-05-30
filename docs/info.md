@@ -25,8 +25,13 @@ Fitting this device into a tiny tapeout would remove all cost from the control p
 ## How it works
 
 A free running angle counter is input into a cordic rotational block and polarity corrected to calculate a 60Hz sine wave.
-The sine wave is gated and then accumulated in PWM modulator produce bi-polar PWM signals which can be used to drive an H Bridge to reconstruct the waveform from battery power.
-The ADC data is sample and a rectified delta with the sine wave is gates and accumulated in a PWM modulator to with programmable gain to produce a PWM signal to control the dump switch.
+The sine wave is gated and then accumulated in PWM modulator produce bi-polar PWM signals which can be used to drive an H Bridge and
+the low side of a transformer, with the high side providing the grid reference.
+
+The AC 'grid' voltage is sampled by ADC with a psuedo energy integration of the delta between ADC data and calculated sine, 
+PLUS the gated PWM gating -|sin| when energy is dumped into a load resistance (water heater). The accumulated energy error is low pass filtered and compaared against a positive threshold and used along with an external gate to gate |sin| and accumulate to produce a PWM signal to drive the dump switch (fet).
+
+The I/O is minimal with 2 I/O for the ADC, 3 pwm outputs and 4 pwm (gain control) inputs.  Total of 5 inputs and 3 outputs and a 48Mhz clock and rest signal.
 
 ## How to test
 
@@ -34,15 +39,13 @@ Tests I used to bring up the RTL with.
 
 ## External hardware
 
-Grid ties solar system, sunlight
-
+    -Grid-tied solar system, sunlight
     -Hbridge and drivers
     -Step up transformer
-    -Bridge Rectifier
-    -DCLink Capactors
+    -Bridge Rectifier, DCLink Capactors
     -Dump FET and driver
     -Resistive Water Heater, water
     -ADC with isolated instrumentation.
-    -external control panel (gates and gain)
+    -external control panel (pwm base loop controls))
 
 

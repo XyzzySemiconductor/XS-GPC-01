@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
 project:
-  title:        "AC Load"      # Project title
+  title:        "60 Hz Grid-Forming ASIC with Dump-Load Control"      # Project title
   author:       "Eric Pearson"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "Cordic 60Hz(grid) sine wave PWM generation H-bridge drive for AC load"      # One line description of what your project does
+  description:  "a CORDIC-locked grid-forming reference + linear dump-load controller ASIC for driving micro-inverters"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     48000000       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -26,18 +26,18 @@ project:
 pinout:
   # Inputs
   ui[0]: "adc_sdata"
-  ui[1]: "gen_gate"
-  ui[2]: "dump_gate"
-  ui[3]: ""
-  ui[4]: "gain0"
-  ui[5]: "gain1"
-  ui[6]: "gain2"
-  ui[7]: "gain3"
+  ui[1]: "gate0_gen"
+  ui[2]: "gate1_dump"
+  ui[3]: "gate2_feedback"
+  ui[4]: "gate3_error"
+  ui[5]: ""
+  ui[6]: ""
+  ui[7]: ""
 
   # Outputs
-  uo[0]: "gen_pwm_p"
-  uo[1]: "gen_pwm_n"
-  uo[2]: "adc_cs"
+  uo[0]: "adc_cs"
+  uo[1]: "gen_pwm_p"
+  uo[2]: "gen_pwm_n"
   uo[3]: "dump_pwm"
   uo[4]: ""
   uo[5]: ""

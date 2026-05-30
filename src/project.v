@@ -29,9 +29,9 @@ module tt_um_60hz_load(
 	assign reset = !rst_n;
 
 	// Gate input reg
-	reg [1:0] gate;
+	reg [3:0] gate;
 	always @(posedge clk) 
-		gate <= ( reset ) ? 0 : ui_in[2:1];
+		gate <= ( reset ) ? 0 : ui_in[4:1];
 
 	// ADC Input
 	wire strobe; // 1 cycle pulse every 16 cycles
@@ -39,16 +39,19 @@ module tt_um_60hz_load(
 	adc_in i_adc (
 		.clk( clk ),
 		.reset( reset ),
-		.ad_cs( uo_out[2] ),
+		.ad_cs( uo_out[0] ),
 		.ad_sdata( ui_in[0] ),
 		.ad_out( ad_data ),
 		.ad_strobe( strobe )
 	);
 
+	wire [11:0] absad_data;
+	assign absad_data = ( ad_data[11] ) ? ~ad_data : ad_data;
+
 	// Cordic unit
-	logic [15:0] angle;
-	logic [15:0] sin_out, cos_out;
-	logic valid, busy;
+	reg [15:0] angle;
+	wire [15:0] sin_out, cos_out;
+	wire valid, busy;
 	cordic_sincos_50000_core_20 i_dut(
 		.clk( clk ),
 		.rst( reset ),
@@ -80,20 +83,22 @@ module tt_um_60hz_load(
 	assign half_cycle = ( strobe && angle == 12499 ) ? 1'b1 : 1'b0;
 
 	// Correct Polarity (just negate)
-	logic signed [15:0] sin, cos;
+	reg signed [15:0] sin, absin;
 	always @(posedge clk) begin
 		if( reset ) begin
 			sin <= 0;
+			absin <= 0;
 		end else if( valid ) begin
-			sin <= ( polarity ) ? ~cos_out : cos_out; // use cos as it aligns with polarity
+			sin   <= ( polarity ) ? ~cos_out : cos_out; // use cos as it aligns with polarity
+			absin <= cos_out; // since cordic works over -/+pi/2
 		end
 	end
 
 	// Accumulate error function
 	// and gates PWM outputs with
 	// guaranteed min pulse width of 4us
-	logic signed [31:0] sin_err, cos_err;
-	logic sin_pwm_p, sin_pwm_n;
+	reg signed [31:0] sin_err;
+	reg sin_pwm_p, sin_pwm_n;
 
 	always @(posedge clk) begin
 		if( reset ) begin
@@ -107,45 +112,51 @@ module tt_um_60hz_load(
 		end
  	end
 
-	assign uo_out[0] = sin_pwm_p;
-	assign uo_out[1] = sin_pwm_n;
+	assign uo_out[1] = sin_pwm_p;
+	assign uo_out[2] = sin_pwm_n;
 
-	// rectivy ADC vs Sine difference for our delta
+	// Output PWM based on gated absin.
 
-	wire [11:0] delta;
-	assign delta = ( polarity ) ? ad_data - sin[15-:12] : sin[15-:12] - ad_data;
-
-	// Accumdulate the delta error (rectified half wave errot)
-	// Have reasonable hard clamps because it can accumulate forever
-	// Run at 48 Mhz, with thresh TH * 192 and PWM when on adds in -TH.
-    // PWM turns on if acc > 192 * TH, and turns off when acc < 0; give 4us min pulse width
-	// PWM edge placement will have teh 48Mhz resoution (~20ns)
-
-	// Use 4 input bits to provide control over the 4us threshold 
-	reg [31:0] thresh, thresh4us;
-	reg [3:0] th_sel;
+	reg signed [31:0] absin_err;
+	reg absin_pwm;
+	wire th_gate; // U > thresh gate
 	always @(posedge clk) begin
-    	th_sel 		<= ui_in[7:4]; // register inputs
-		thresh    	<= 2'b01 << (7+th_sel); // ranges from 2^7 to 2^22
-		thresh4us	<= 2'b11 << (13+th_sel);// is 192 * thresh
-	end
+		if( reset ) begin
+			absin_pwm <= 0;
+			absin_err <= 0;
+		end else begin
+			absin_pwm <= ( absin_err >  16465 * 12 * 16 ) ? 1 : ( absin_err < 0 ) ? 0 : sin_pwm_p;
+			absin_err <= absin_err + ((gate[1]&&th_gate)?absin:0) - ((absin_pwm)?16465:0);
+		end
+ 	end
 
+	assign uo_out[3] = absin_pwm;
+
+	// Pseduo energy is the volt error Vin-sin subtractin |ad_data| when pem asserted
+	wire [11:0] delta, deltad, deltae;
+	assign delta = ( polarity ) ? ad_data - sin[15-:12] : sin[15-:12] - ad_data;
+    assign deltad = ( absin_pwm && gate[2] ) ? abs_addata : 0;
+	assign deltae = ( gate[3] ) ? delta - deltad : 0;
+
+
+	// Accumdulate the delta error 'u' 
+	// Have reasonable hard clamps because it can accumulate forever
 	reg [31:0] fast_acc;
 	wire [31:0] next_acc;
-	reg fast_pwm;
-	assign next_acc = fast_acc + ((gate[1])?{{24{delta[11]}},delta[11:0]}:0) - ((fast_pwm)?thresh:0);
+	assign next_acc = fast_acc + {{24{deltae[11]}},deltae[11:0]};
 	always @(posedge clk) begin
 		if( reset ) begin
 			fast_acc <= 0;
-			fast_pwm <= 0;
 		end else begin
 			fast_acc <= ( next_acc[31:30] == 2'b01 ) ? 32'h3FFF_FFFF :
                        	( next_acc[31:30] == 2'b10 ) ? 32'hC000_0000 : next_acc;
-			fast_pwm <= ( !fast_acc[31] && fast_acc > thresh4us ) ? 1'b1 : 
-                        (  fast_acc[31]                         ) ? 1'b0 : fast_pwm;
 		end
 	end
 
-	assign uo_out[3] = fast_pwm;
+	// Low pass filter u : TBD
+
+	// Threhold filterer u;
+
+	assign th_gate == ( !fast_acc[31] && fast_acc[31] > 32'h0010_0000; // can be modulate down
 
 endmodule
