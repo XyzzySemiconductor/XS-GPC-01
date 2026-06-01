@@ -1,4 +1,5 @@
 // vim: ts=4:
+// Two cahnnels 0,1
 module adc_in
 (
 	// Input clock,
@@ -7,10 +8,11 @@ module adc_in
 	
 	// External A/D Converters (2.5v)
 	output logic  ad_cs,
-	input  logic  ad_sdata,
+	input  logic  [1:0] ad_sdata,
 	
 	// ADC monitor outputs
-	output logic [11:0] ad_out,
+	output logic [11:0] ad_out0,
+	output logic [11:0] ad_out1,
 	output logic ad_strobe
 );
 
@@ -31,17 +33,19 @@ always_ff @(posedge clk)
 	ad_cs <= ( sample_div == ADCS_SEL ) ? 1'b1 : 1'b0;
 
 // DATA Input I/O registers
-logic ad_ireg;
+logic [1:0] ad_ireg;
 always_ff @(posedge clk)
 	ad_ireg <= ad_sdata;
 
 // Data input shift regisers MSB first
-reg [11:0] ad_sreg;
+reg [11:0] ad_sreg0, ad_sreg1;;
 always_ff @(posedge clk) begin
   if( reset ) begin
-	ad_sreg <= 0;
+	ad_sreg0 <= 0;
+	ad_sreg1 <= 0;
   end else begin
-		ad_sreg <= { ad_sreg[10:0], ad_ireg };
+		ad_sreg0 <= { ad_sreg0[10:0], ad_ireg[0] };
+		ad_sreg1 <= { ad_sreg1[10:0], ad_ireg[1] };
   end
 end
 
@@ -49,19 +53,23 @@ end
 logic ad_hold_en;
 always_ff @(posedge clk) 
 	ad_hold_en <= ( sample_div == HOLD_SEL ) ? 1'b1 : 1'b0;
-logic [11:0] ad_hold;
+logic [11:0] ad_hold0, ad_hold1;
 always_ff @(posedge clk) 
   if( reset ) begin
-	ad_hold <= 0;
+	ad_hold0 <= 0;
+	ad_hold1 <= 0;
   end else begin
-	for( int ii =  0; ii < 4; ii++ ) 
-		ad_hold <= ( ad_hold_en ) ? ad_sreg : ad_hold;
+	for( int ii =  0; ii < 4; ii++ ) begin
+		ad_hold0 <= ( ad_hold_en ) ? ad_sreg0 : ad_hold0;
+		ad_hold1 <= ( ad_hold_en ) ? ad_sreg1 : ad_hold1;
+	end
   end
 // ad_strobe reg
 always_ff @(posedge clk) ad_strobe <= ad_hold_en;
 
 // Output optional negation
 // data outputs with negation
-assign ad_out = ad_hold ^ 12'h800;
+assign ad_out0 = ad_hold0 ^ 12'h800;
+assign ad_out1 = ad_hold1 ^ 12'h800;
 
 endmodule

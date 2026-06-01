@@ -31,22 +31,23 @@ module tt_um_60hz_load(
 	// Gate input reg
 	reg [3:0] gate;
 	always @(posedge clk) 
-		gate <= ( reset ) ? 0 : ui_in[4:1];
+		gate <= ( reset ) ? 0 : ui_in[5:2];
 
 	// ADC Input
 	wire strobe; // 1 cycle pulse every 16 cycles
-	wire [11:0] ad_data; // 2s comp adc input data
+	wire [11:0] ac_data, dc_data; // 2s comp adc input data
 	adc_in i_adc (
 		.clk( clk ),
 		.reset( reset ),
 		.ad_cs( uo_out[0] ),
-		.ad_sdata( ui_in[0] ),
-		.ad_out( ad_data ),
+		.ad_sdata( ui_in[1:0] ),
+		.ad_out0( ac_data ),
+		.ad_out1( dc_data ),
 		.ad_strobe( strobe )
 	);
 
-	wire [11:0] absad_data;
-	assign absad_data = ( ad_data[11] ) ? ~ad_data : ad_data;
+	wire [11:0] absac_data;
+	assign absac_data = ( ac_data[11] ) ? ~ac_data : ac_data;
 
 	// Cordic unit
 	reg [15:0] angle;
@@ -132,10 +133,10 @@ module tt_um_60hz_load(
 
 	assign uo_out[3] = absin_pwm;
 
-	// Pseduo energy is the volt error Vin-sin subtractin |ad_data| when pem asserted
+	// Pseduo energy is the volt error Vin-sin subtractin |ac_data| when pem asserted
 	wire [11:0] delta, deltad, deltae;
-	assign delta = ( polarity ) ? ad_data - sin[15-:12] : sin[15-:12] - ad_data;
-    assign deltad = ( absin_pwm && gate[2] ) ? absad_data : 0;
+	assign delta = ( polarity ) ? ac_data - sin[15-:12] : sin[15-:12] - ac_data;
+    assign deltad = ( absin_pwm && gate[2] ) ? absac_data : 0;
 	assign deltae = ( gate[3] ) ? delta - deltad : 0;
 
 
