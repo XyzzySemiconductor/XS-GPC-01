@@ -48,9 +48,6 @@ module tt_um_60hz_load(
 		.ad_strobe( strobe )
 	);
 
-	wire [11:0] absac_data;
-	assign absac_data = ( ac_data[11] ) ? ~ac_data : ac_data;
-
 	// Cordic unit
 	reg [15:0] angle;
 	wire [15:0] sin_out, cos_out;
@@ -70,15 +67,17 @@ module tt_um_60hz_load(
 	// Count angle every start pulse (-25000 to 24999 )
    	// at 3Mhz (48Mhz/16) this gives us exactly 60 Hz grid freq
 
-	reg polarity;
+	reg polarity, quadrature;
 	always @(posedge clk) begin
 		if( reset ) begin
 			angle <= -12500;
 			polarity <= 0;
+			quadrature <= 0;
 		end else begin
 			if( strobe ) begin
 				angle <= ( angle == 12499 ) ? -12500 : angle + 1;
 		    	polarity <= ( angle == 12499 ) ? ~polarity : polarity;
+				quadrature <= ( angle == 6250 ) ? 0 : ( angle == -6250 ) ? 1 : quadrature;
 			end
 		end
 	end
@@ -94,20 +93,6 @@ module tt_um_60hz_load(
 		end else if( valid ) begin
 			sin   <= ( polarity ) ? ~cos_out : cos_out; // use cos as it aligns with polarity
 			absin <= cos_out; // since cordic works over -/+pi/2
-		end
-	end
-
-	// gain_vref is gate 4, duty cycle is vrefA
-	reg [20:0] vref_count, vref_sum, vref;
-	always @(posedge clk) begin
-		if( reset ) begin
-			vref_count <=0;
-			vref_sum <= 0;
-			vref <= 0;
-		end else begin
-			vref_count <= vref_count + 1;
-			vref_sum <= ( vref_count == 20'hfffff ) ? gate[4] : vref_sum + gate[4];
-			vref <= ( vref_count == 20'hfffff ) ? vref_sum : vref;
 		end
 	end
 
@@ -136,23 +121,27 @@ module tt_um_60hz_load(
 
 	reg signed [31:0] absin_err;
 	reg absin_pwm;
-	wire th_gate; // U > thresh gate
+	wire th_gate, dc_th_gate; // U > thresh gate
 	always @(posedge clk) begin
 		if( reset ) begin
 			absin_pwm <= 0;
 			absin_err <= 0;
 		end else begin
 			absin_pwm <= ( absin_err >  16465 * 12 * 16 ) ? 1 : ( absin_err < 0 ) ? 0 : sin_pwm_p;
-			absin_err <= absin_err + ((gate[1]&&th_gate)?absin:0) - ((absin_pwm)?16465:0);
+			absin_err <= absin_err + ((gate[1]&&(th_gate|dc_th_gate))?absin:0) - ((absin_pwm)?16465:0);
 		end
  	end
 
 	assign uo_out[3] = absin_pwm;
 
-	// Pseduo energy is the volt error Vin-sin subtractin |ac_data| when pem asserted
+	/////////////
+	//	AC Loop
+	/////////////
+
+	// Pseduo energy is the voltage error from leading AC, ie phase error from generator energy
 	wire [11:0] delta, deltad, deltae;
-	assign delta = ( polarity ) ? ac_data - sin[15-:12] : sin[15-:12] - ac_data;
-    assign deltad = ( absin_pwm && gate[2] ) ? absac_data : 0;
+	assign delta = ( quadrature ) ? sin[15-:12] - ac_data :  ac_data - sin[15-:12];
+    assign deltad = ( absin_pwm && gate[2] ) ? absin : 0;
 	assign deltae = ( gate[3] ) ? delta - deltad : 0;
 
 
@@ -160,7 +149,7 @@ module tt_um_60hz_load(
 	// Have reasonable hard clamps because it can accumulate forever
 	reg [31:0] fast_acc;
 	wire [31:0] next_acc;
-	assign next_acc = fast_acc + {{24{deltae[11]}},deltae[11:0]};
+	assign next_acc = fast_acc + {{20{deltae[11]}},deltae[11:0]};
 	always @(posedge clk) begin
 		if( reset ) begin
 			fast_acc <= 0;
@@ -175,5 +164,50 @@ module tt_um_60hz_load(
 	// Threhold filterer u;
 
 	assign th_gate = ( !fast_acc[31] && fast_acc[31] > 32'h000F_FFFF ) ? 1'b1 : 1'b0; // can be modulate down
+
+	/////////////
+	//	DC Loop
+	/////////////
+
+	// gain_vref is gate 4, duty cycle is Vref DC
+	reg [20:0] vref_count, vref_sum, vref;
+	always @(posedge clk) begin
+		if( reset ) begin
+			vref_count <=0;
+			vref_sum <= 0;
+			vref <= 0;
+		end else begin
+			vref_count <= vref_count + 1;
+			vref_sum <= ( vref_count == 20'hfffff ) ? gate[4] : vref_sum + gate[4];
+			vref <= ( vref_count == 20'hfffff ) ? vref_sum : vref;
+		end
+	end
+
+	// Pseduo energy is the voltage error from Vref DC
+	wire [11:0] dc_delta, dc_deltad, dc_deltae;
+	assign dc_delta = dc_data - vref[19-:12];
+    assign dc_deltad = ( absin_pwm && gate[2] ) ? absin : 0;
+	assign dc_deltae = ( gate[3] ) ? dc_delta - dc_deltad : 0;
+
+
+	// Accumdulate the delta error 'u' 
+	// Have reasonable hard clamps because it can accumulate forever
+	reg [31:0] dc_fast_acc;
+	wire [31:0] dc_next_acc;
+	assign dc_next_acc = dc_fast_acc + {{20{dc_deltae[11]}},dc_deltae[11:0]};
+	always @(posedge clk) begin
+		if( reset ) begin
+			dc_fast_acc <= 0;
+		end else begin
+			dc_fast_acc <= ( dc_next_acc[31:30] == 2'b01 ) ? 32'h3FFF_FFFF :
+                       	   ( dc_next_acc[31:30] == 2'b10 ) ? 32'hC000_0000 : next_acc;
+		end
+	end
+
+	// Low pass filter u : TBD
+
+	// Threhold filterer u;
+
+	assign dc_th_gate = ( !dc_fast_acc[31] && dc_fast_acc[31] > 32'h000F_FFFF ) ? 1'b1 : 1'b0; 
 
 endmodule
