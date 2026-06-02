@@ -15,6 +15,8 @@ async def test_project(dut):
     cocotb.start_soon(clock.start())
 
     # Reset
+    dut.vac.value = 0;
+    dut.vdc.value = 100;
     dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 4

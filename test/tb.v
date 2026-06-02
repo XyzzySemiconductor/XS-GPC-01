@@ -23,6 +23,7 @@ module tb ();
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+  reg adc_vac, adc_vdc;
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
@@ -37,7 +38,7 @@ module tb ();
       .VGND(VGND),
 `endif
 
-      .ui_in  (ui_in),    // Dedicated inputs
+      .ui_in  ({ui_in[7:2], adc_vdc, adc_vac}),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
       .uio_in (uio_in),   // IOs: Input path
       .uio_out(uio_out),  // IOs: Output path
@@ -63,4 +64,37 @@ module tb ();
 	cnt_sin_np<= (!rst_n)?0:(sin_pwm_n &
 							 sin_pwm_p )?cnt_sin_np+1:cnt_sin_np;
   end
+
+    /////////////////////
+    // AD7352 Model     
+    /////////////////////
+
+	logic [11:0] vdc, vac; // driven by testbench
+    // sim pad register of CS
+    logic cs_ireg;
+    always @(posedge !clk)
+        cs_ireg <= ( !rst_n ) ? 0 : uo_out[0];
+  
+    // synthesisiable ADC models to feed system data into LCC
+    logic [3:0] m_ad_out;
+    lcc_adcsim i_adcsim(
+        .clk( !clk ),
+        .reset( !rst_n ),
+        .ad_in( { 12'd0, 12'd0, vdc, vac } ),
+        .ad_out( m_ad_out[3:0] ),
+        .ad_cs( cs_ireg )
+    );
+
+    // sim out pad output reg for data
+    always_ff @(posedge !clk) begin 
+      if( !rst_n ) begin
+        adc_vac <= 0;
+        adc_vdc <= 0;
+      end else begin
+        adc_vac <= m_ad_out[0];
+        adc_vdc <= m_ad_out[1];
+      end
+    end
+
+
 endmodule
