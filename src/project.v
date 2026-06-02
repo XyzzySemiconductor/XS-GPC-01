@@ -163,7 +163,7 @@ module tt_um_60hz_load(
 
 	// Threhold filterer u;
 
-	assign th_gate = ( !fast_acc[31] && fast_acc[31] > 32'h000F_FFFF ) ? 1'b1 : 1'b0; // can be modulate down
+	assign th_gate = ( !fast_acc[31] && fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; // can be modulate down
 
 	/////////////
 	//	DC Loop
@@ -200,7 +200,7 @@ module tt_um_60hz_load(
 			dc_fast_acc <= 0;
 		end else begin
 			dc_fast_acc <= ( dc_next_acc[31:30] == 2'b01 ) ? 32'h3FFF_FFFF :
-                       	   ( dc_next_acc[31:30] == 2'b10 ) ? 32'hC000_0000 : next_acc;
+                       	   ( dc_next_acc[31:30] == 2'b10 ) ? 32'hC000_0000 : dc_next_acc;
 		end
 	end
 
@@ -208,6 +208,6 @@ module tt_um_60hz_load(
 
 	// Threhold filterer u;
 
-	assign dc_th_gate = ( !dc_fast_acc[31] && dc_fast_acc[31] > 32'h000F_FFFF ) ? 1'b1 : 1'b0; 
+	assign dc_th_gate = ( !dc_fast_acc[31] && dc_fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; 
 
 endmodule
