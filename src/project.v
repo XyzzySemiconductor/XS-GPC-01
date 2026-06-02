@@ -18,7 +18,7 @@ module tt_um_60hz_load(
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out[7:4]  = 0; 
+  assign uo_out[6:4]  = 0; 
   assign uio_out = 0;
   assign uio_oe  = 0;
 
@@ -50,6 +50,7 @@ module tt_um_60hz_load(
 
 	wire [11:0] absac_data;
 	assign absac_data = ( ac_data[11] ) ? ~ac_data : ac_data;
+	assign uo_out[7] = !clk; // send out !clk lined up with ad_cs
 
 	// Cordic unit
 	reg [15:0] angle;
