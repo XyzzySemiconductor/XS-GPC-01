@@ -140,7 +140,7 @@ module tt_um_60hz_load(
 
 	// Pseduo energy is the voltage error from leading AC, ie phase error from generator energy
 	reg [11:0] delta, deltad, deltae;
-	always @(clk) begin
+	always @(posedge clk) begin
 		delta  <= ( quadrature ) ? sin[15-:12] - ac_data :  ac_data - sin[15-:12];
     	deltad <= ( absin_pwm && gate[2] ) ? absin : 0;
 		deltae <= ( gate[3] ) ? delta - deltad : 0;
