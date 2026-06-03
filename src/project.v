@@ -81,8 +81,6 @@ module tt_um_60hz_load(
 			end
 		end
 	end
-	wire half_cycle;
-	assign half_cycle = ( strobe && angle == 12499 ) ? 1'b1 : 1'b0;
 
 	// Correct Polarity (just negate)
 	reg signed [15:0] sin, absin;
@@ -121,7 +119,7 @@ module tt_um_60hz_load(
 
 	reg signed [31:0] absin_err;
 	reg absin_pwm;
-	wire th_gate, dc_th_gate; // U > thresh gate
+	reg th_gate, dc_th_gate; // U > thresh gate
 	always @(posedge clk) begin
 		if( reset ) begin
 			absin_pwm <= 0;
@@ -162,8 +160,8 @@ module tt_um_60hz_load(
 	// Low pass filter u : TBD
 
 	// Threhold filterer u;
-
-	assign th_gate = ( !fast_acc[31] && fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; // can be modulate down
+	always @(posedge clk)
+		th_gate <= ( !fast_acc[31] && fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; // can be modulate down
 
 	/////////////
 	//	DC Loop
@@ -208,6 +206,7 @@ module tt_um_60hz_load(
 
 	// Threhold filterer u;
 
-	assign dc_th_gate = ( !dc_fast_acc[31] && dc_fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; 
+	always @(posedge clk)
+		dc_th_gate <= ( !dc_fast_acc[31] && dc_fast_acc > 32'h000F_FFFF ) ? 1'b1 : 1'b0; 
 
 endmodule
