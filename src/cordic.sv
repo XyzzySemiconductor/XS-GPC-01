@@ -47,6 +47,18 @@ module cordic_sincos_50000_core_20 (
     reg signed [IW-1:0] x, y, z;
     reg [3:0]           iter;  // 0..14
 
+	// Pre build X, Y shifters function of iter to hint to synth (really needed?)
+	wire signed [IW-1:0] shx3, shx2, shx1, shx0, shy3, shy2, shy1, shy0;
+	assign shx0 = ( iter[0] ) ? (   x>>>1) : x;
+	assign shx1 = ( iter[1] ) ? (shx0>>>2) : shx0;
+	assign shx2 = ( iter[2] ) ? (shx1>>>4) : shx1;
+	assign shx3 = ( iter[3] ) ? (shx2>>>8) : shx2;
+	assign shy0 = ( iter[0] ) ? (   y>>>1) : y;
+	assign shy1 = ( iter[1] ) ? (shy0>>>2) : shy0;
+	assign shy2 = ( iter[2] ) ? (shy1>>>4) : shy1;
+	assign shy3 = ( iter[3] ) ? (shy2>>>8) : shy2;
+	
+	
     // sign-extend atan_table entry to 19 bits
     wire signed [IW-1:0] dz;
 	assign dz = {{(IW-16){atan_table[iter][15]}}, atan_table[iter]};
@@ -71,14 +83,13 @@ module cordic_sincos_50000_core_20 (
                 busy <= 1'b1;
             end
             else if (busy) begin
-
                 if (z >= 0) begin
-                    x <= x - (y >>> iter);
-                    y <= y + (x >>> iter);
+                    x <= x - shy3; //(y >>> iter);
+                    y <= y + shx3; //(x >>> iter);
                     z <= z - dz;
                 end else begin
-                    x <= x + (y >>> iter);
-                    y <= y - (x >>> iter);
+                    x <= x + shy3; //(y >>> iter);
+                    y <= y - shx3; //(x >>> iter);
                     z <= z + dz;
                 end
 
