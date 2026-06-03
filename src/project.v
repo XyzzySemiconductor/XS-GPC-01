@@ -117,16 +117,18 @@ module tt_um_60hz_load(
 
 	// Output PWM based on gated absin.
 
-	reg signed [31:0] absin_err;
+	reg signed [31:0] absin_err, absin_in;
 	reg absin_pwm;
 	reg th_gate, dc_th_gate; // U > thresh gate
 	always @(posedge clk) begin
 		if( reset ) begin
+			absin_in <= 0;
 			absin_pwm <= 0;
 			absin_err <= 0;
 		end else begin
-			absin_pwm <= ( absin_err >  16465 * 12 * 16 ) ? 1 : ( absin_err < 0 ) ? 0 : sin_pwm_p;
-			absin_err <= absin_err + ((gate[1]&&(th_gate|dc_th_gate))?absin:0) - ((absin_pwm)?16465:0);
+			absin_pwm <= ( absin_err >  16465 * 12 * 16 ) ? 1 : ( absin_err < 0 ) ? 0 : absin_pwm;
+			absin_in  <= (gate[1]&&(th_gate|dc_th_gate))?absin:0;
+			absin_err <= absin_err + absin_in - ((absin_pwm)?16465:0);
 		end
  	end
 
@@ -137,10 +139,12 @@ module tt_um_60hz_load(
 	/////////////
 
 	// Pseduo energy is the voltage error from leading AC, ie phase error from generator energy
-	wire [11:0] delta, deltad, deltae;
-	assign delta = ( quadrature ) ? sin[15-:12] - ac_data :  ac_data - sin[15-:12];
-    assign deltad = ( absin_pwm && gate[2] ) ? absin : 0;
-	assign deltae = ( gate[3] ) ? delta - deltad : 0;
+	reg [11:0] delta, deltad, deltae;
+	always @(clk) begin
+		delta  <= ( quadrature ) ? sin[15-:12] - ac_data :  ac_data - sin[15-:12];
+    	deltad <= ( absin_pwm && gate[2] ) ? absin : 0;
+		deltae <= ( gate[3] ) ? delta - deltad : 0;
+	end
 
 
 	// Accumdulate the delta error 'u' 
@@ -182,10 +186,12 @@ module tt_um_60hz_load(
 	end
 
 	// Pseduo energy is the voltage error from Vref DC
-	wire [11:0] dc_delta, dc_deltad, dc_deltae;
-	assign dc_delta = dc_data - vref[19-:12];
-    assign dc_deltad = ( absin_pwm && gate[2] ) ? absin : 0;
-	assign dc_deltae = ( gate[3] ) ? dc_delta - dc_deltad : 0;
+	reg [11:0] dc_delta, dc_deltad, dc_deltae;
+	always @(posedge clk) begin
+		dc_delta  <= dc_data - vref[19-:12];
+    	dc_deltad <= ( absin_pwm && gate[2] ) ? absin : 0;
+		dc_deltae <= ( gate[3] ) ? dc_delta - dc_deltad : 0;
+	end
 
 
 	// Accumdulate the delta error 'u' 
