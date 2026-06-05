@@ -172,27 +172,27 @@ module tt_um_60hz_load(
 	/////////////
 
 	// gain_vref is gate 4, duty cycle is Vref DC
-	reg [20:0] vref_count, vref_sum, vref;
-	always @(posedge clk) begin
-		if( reset ) begin
-			vref_count <=0;
-			vref_sum <= 0;
-			vref <= 0;
-		end else begin
-			vref_count <= vref_count + 1;
-			vref_sum <= ( vref_count == 20'hfffff ) ? gate[4] : vref_sum + gate[4];
-			vref <= ( vref_count == 20'hfffff ) ? vref_sum : vref;
-		end
-	end
+	//reg [20:0] vref_count, vref_sum, vref;
+	//always @(posedge clk) begin
+	//	if( reset ) begin
+	//		vref_count <=0;
+	//		vref_sum <= 0;
+	//		vref <= 0;
+	//	end else begin
+	//		vref_count <= vref_count + 1;
+	//		vref_sum <= ( vref_count == 20'hfffff ) ? gate[4] : vref_sum + gate[4];
+	//		vref <= ( vref_count == 20'hfffff ) ? vref_sum : vref;
+	//	end
+	//end
 
 	// Pseduo energy is the voltage error from Vref DC
 	reg [11:0] dc_delta, dc_deltad, dc_deltae;
 	always @(posedge clk) begin
-		dc_delta  <= dc_data - vref[19-:12];
+		//dc_delta  <= dc_data - vref[19-:12];
+		dc_delta  <= dc_data + (( gate[4] ) ? 12'h800 : 0 ); 
     	dc_deltad <= ( absin_pwm && gate[2] ) ? absin : 0;
 		dc_deltae <= ( gate[3] ) ? dc_delta - dc_deltad : 0;
 	end
-
 
 	// Accumdulate the delta error 'u' 
 	// Have reasonable hard clamps because it can accumulate forever
