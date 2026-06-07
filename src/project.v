@@ -71,19 +71,20 @@ module tt_um_60hz_load(
    	// at 3Mhz (48Mhz/16) this gives us exactly 60 Hz grid freq
 
 	reg polarity;
+	reg pdir;
 	always @(posedge clk) begin
 		if( reset ) begin
-			angle <= -12500;
+			angle <= 12500;
 			polarity <= 0;
+			pdir <= 0;
 		end else begin
 			if( strobe ) begin
-				angle <= ( angle == 12499 ) ? -12500 : angle + 1;
-		    	polarity <= ( angle == 12499 ) ? ~polarity : polarity;
+				angle <= angle + (( pdir ) ? 1 : -1);
+		    	polarity <= ( angle == 12499 && pdir == 1 ) ? ~polarity : polarity;
+				pdir <= ( pdir == 0 && angle == 1 ) ? 1 : ( pdir == 1 && angle == 12499 ) ? 0 : pdir;
 			end
 		end
 	end
-
-
 
 	// Multiply cos by 3: to nicely fill dynamic range
 	wire signed [11:0] cos3x;
@@ -106,7 +107,7 @@ module tt_um_60hz_load(
 	//		$display("cos_rom[%0d] = 12'sd%0d;", ii, cos_rom[ii] );
 	//end
 	///////////////////
-    reg [11:0] cos_rom [255:0];
+    reg [11:0] cos_rom [127:0];
 	initial begin
 cos_rom[0] = 12'sd1543;
 cos_rom[1] = 12'sd1542;
@@ -236,137 +237,9 @@ cos_rom[124] = 12'sd0;
 cos_rom[125] = 12'sd0;
 cos_rom[126] = 12'sd0;
 cos_rom[127] = 12'sd0;
-cos_rom[128] = 12'sd0;
-cos_rom[129] = 12'sd0;
-cos_rom[130] = 12'sd0;
-cos_rom[131] = 12'sd0;
-cos_rom[132] = 12'sd0;
-cos_rom[133] = 12'sd0;
-cos_rom[134] = 12'sd0;
-cos_rom[135] = 12'sd0;
-cos_rom[136] = 12'sd0;
-cos_rom[137] = 12'sd0;
-cos_rom[138] = 12'sd0;
-cos_rom[139] = 12'sd0;
-cos_rom[140] = 12'sd0;
-cos_rom[141] = 12'sd0;
-cos_rom[142] = 12'sd0;
-cos_rom[143] = 12'sd0;
-cos_rom[144] = 12'sd0;
-cos_rom[145] = 12'sd0;
-cos_rom[146] = 12'sd0;
-cos_rom[147] = 12'sd0;
-cos_rom[148] = 12'sd0;
-cos_rom[149] = 12'sd0;
-cos_rom[150] = 12'sd0;
-cos_rom[151] = 12'sd0;
-cos_rom[152] = 12'sd0;
-cos_rom[153] = 12'sd0;
-cos_rom[154] = 12'sd0;
-cos_rom[155] = 12'sd0;
-cos_rom[156] = 12'sd0;
-cos_rom[157] = 12'sd0;
-cos_rom[158] = 12'sd1;
-cos_rom[159] = 12'sd16;
-cos_rom[160] = 12'sd40;
-cos_rom[161] = 12'sd66;
-cos_rom[162] = 12'sd90;
-cos_rom[163] = 12'sd115;
-cos_rom[164] = 12'sd141;
-cos_rom[165] = 12'sd165;
-cos_rom[166] = 12'sd189;
-cos_rom[167] = 12'sd214;
-cos_rom[168] = 12'sd238;
-cos_rom[169] = 12'sd262;
-cos_rom[170] = 12'sd288;
-cos_rom[171] = 12'sd312;
-cos_rom[172] = 12'sd336;
-cos_rom[173] = 12'sd360;
-cos_rom[174] = 12'sd384;
-cos_rom[175] = 12'sd408;
-cos_rom[176] = 12'sd432;
-cos_rom[177] = 12'sd456;
-cos_rom[178] = 12'sd480;
-cos_rom[179] = 12'sd504;
-cos_rom[180] = 12'sd526;
-cos_rom[181] = 12'sd550;
-cos_rom[182] = 12'sd573;
-cos_rom[183] = 12'sd597;
-cos_rom[184] = 12'sd619;
-cos_rom[185] = 12'sd642;
-cos_rom[186] = 12'sd664;
-cos_rom[187] = 12'sd687;
-cos_rom[188] = 12'sd708;
-cos_rom[189] = 12'sd730;
-cos_rom[190] = 12'sd753;
-cos_rom[191] = 12'sd774;
-cos_rom[192] = 12'sd795;
-cos_rom[193] = 12'sd816;
-cos_rom[194] = 12'sd838;
-cos_rom[195] = 12'sd859;
-cos_rom[196] = 12'sd879;
-cos_rom[197] = 12'sd900;
-cos_rom[198] = 12'sd919;
-cos_rom[199] = 12'sd939;
-cos_rom[200] = 12'sd958;
-cos_rom[201] = 12'sd978;
-cos_rom[202] = 12'sd997;
-cos_rom[203] = 12'sd1015;
-cos_rom[204] = 12'sd1035;
-cos_rom[205] = 12'sd1053;
-cos_rom[206] = 12'sd1071;
-cos_rom[207] = 12'sd1089;
-cos_rom[208] = 12'sd1104;
-cos_rom[209] = 12'sd1122;
-cos_rom[210] = 12'sd1138;
-cos_rom[211] = 12'sd1155;
-cos_rom[212] = 12'sd1171;
-cos_rom[213] = 12'sd1188;
-cos_rom[214] = 12'sd1203;
-cos_rom[215] = 12'sd1218;
-cos_rom[216] = 12'sd1233;
-cos_rom[217] = 12'sd1248;
-cos_rom[218] = 12'sd1263;
-cos_rom[219] = 12'sd1276;
-cos_rom[220] = 12'sd1290;
-cos_rom[221] = 12'sd1305;
-cos_rom[222] = 12'sd1317;
-cos_rom[223] = 12'sd1330;
-cos_rom[224] = 12'sd1342;
-cos_rom[225] = 12'sd1354;
-cos_rom[226] = 12'sd1366;
-cos_rom[227] = 12'sd1377;
-cos_rom[228] = 12'sd1389;
-cos_rom[229] = 12'sd1399;
-cos_rom[230] = 12'sd1410;
-cos_rom[231] = 12'sd1419;
-cos_rom[232] = 12'sd1429;
-cos_rom[233] = 12'sd1438;
-cos_rom[234] = 12'sd1447;
-cos_rom[235] = 12'sd1455;
-cos_rom[236] = 12'sd1464;
-cos_rom[237] = 12'sd1471;
-cos_rom[238] = 12'sd1479;
-cos_rom[239] = 12'sd1485;
-cos_rom[240] = 12'sd1492;
-cos_rom[241] = 12'sd1498;
-cos_rom[242] = 12'sd1503;
-cos_rom[243] = 12'sd1509;
-cos_rom[244] = 12'sd1513;
-cos_rom[245] = 12'sd1518;
-cos_rom[246] = 12'sd1522;
-cos_rom[247] = 12'sd1527;
-cos_rom[248] = 12'sd1530;
-cos_rom[249] = 12'sd1533;
-cos_rom[250] = 12'sd1536;
-cos_rom[251] = 12'sd1537;
-cos_rom[252] = 12'sd1539;
-cos_rom[253] = 12'sd1540;
-cos_rom[254] = 12'sd1542;
-cos_rom[255] = 12'sd1542;
 	end
     assign valid = 1;
-	assign cos3x = cos_rom[angle[14-:8]];
+	assign cos3x = cos_rom[angle[13-:7]];
 	
 	// Correct Polarity (just negate)
 	reg signed [11:0] sin, absin;
