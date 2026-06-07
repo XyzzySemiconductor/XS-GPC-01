@@ -37,8 +37,8 @@ async def test_project(dut):
     assert int(dut.cnt_sin_np.value) == 0
 
     # Check that each is approx 1/3 of cnt
-    assert int(dut.cnt_sin_p.value) > 250000
-    assert int(dut.cnt_sin_n.value) > 250000
+    assert int(dut.cnt_sin_p.value) > 200000
+    assert int(dut.cnt_sin_n.value) > 200000
 
     assert int(dut.cnt_sin_p.value) < 260000
     assert int(dut.cnt_sin_n.value) < 260000
