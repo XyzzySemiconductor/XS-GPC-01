@@ -81,8 +81,8 @@ module tt_um_60hz_load(
 	end
 
 	// Multiply cos by 3: to nicely fill dynamic range
-	wire signed [16:0] cos3x;
-	assign cos3x = cos_out + ( cos_out << 1 );
+	wire signed [11:0] cos3x;
+	assign cos3x = cos_out[15-:12] + ( cos_out[15-:12] >>> 1 );
 
 	// Correct Polarity (just negate)
 	reg signed [11:0] sin, absin;
@@ -91,8 +91,8 @@ module tt_um_60hz_load(
 			sin <= 0;
 			absin <= 0;
 		end else if( valid ) begin
-			sin   <= ( polarity ) ? ~cos3x[16-:12] : cos3x[16-:12]; // use cos as it aligns with polarity
-			absin <= cos3x[16-:12] ; // since cordic works over -/+pi/2
+			sin   <= ( polarity ) ? ~cos3x : cos3x; // use cos as it aligns with polarity
+			absin <= cos3x; // since cordic works over -/+pi/2
 		end
 	end
 
@@ -151,13 +151,12 @@ module tt_um_60hz_load(
 	// Have reasonable hard clamps because it can accumulate forever
 	reg signed [25:0] fast_acc;
 	wire signed [25:0] next_acc;
-	assign next_acc = fast_acc + delta - (( fast_acc > 26'h00FFFFF ) ? absin : 0 );
+	assign next_acc = fast_acc + delta - (( !fast_acc[25] && (|fast_acc[24-:5]) ) ? absin : 'sd0 );
 	always @(posedge clk) begin
 		if( reset ) begin
 			fast_acc <= 0;
 		end else begin
-			fast_acc <= ( next_acc[25:24] == 2'b01 ) ? 26'h1FFFFFF :
-                       	( next_acc[25:24] == 2'b10 ) ? 26'h2000000 : next_acc;
+			fast_acc <= ( next_acc[25] != next_acc[24] ) ? {next_acc[25], {25{~next_acc[25]}}} : next_acc;
 		end
 	end
 
@@ -165,7 +164,7 @@ module tt_um_60hz_load(
 
 	// Threhold filterer u;
 	always @(posedge clk)
-		th_gate <= ( !fast_acc[25] && fast_acc > 26'h00FFFFF ) ? 1'b1 : 1'b0; // can be modulate down
+		th_gate <= !fast_acc[25] & |fast_acc[24-:5]; // can be modulate down
 
 	/////////////
 	//	DC Loop
@@ -181,13 +180,12 @@ module tt_um_60hz_load(
 	// Have reasonable hard clamps because it can accumulate forever
 	reg signed [30:0] dc_fast_acc;
 	wire signed [30:0] dc_next_acc;
-	assign dc_next_acc = dc_fast_acc + dc_delta - (( dc_fast_acc > 31'h00FF_FFFF ) ? absin : 0 );
+	assign dc_next_acc = dc_fast_acc + dc_delta - ((!dc_fast_acc[30] & |dc_fast_acc[29-:6] ) ? absin : 0 );
 	always @(posedge clk) begin
 		if( reset ) begin
 			dc_fast_acc <= 0;
 		end else begin
-			dc_fast_acc <= ( dc_next_acc[30:29] == 2'b01 ) ? 31'h1FFF_FFFF :
-                       	   ( dc_next_acc[30:29] == 2'b10 ) ? 31'h6000_0000 : dc_next_acc;
+			dc_fast_acc <= ( dc_next_acc[30] != dc_next_acc[29] ) ? {dc_next_acc[30], {30{~dc_next_acc[30]}}} : dc_next_acc;
 		end
 	end
 
@@ -196,6 +194,6 @@ module tt_um_60hz_load(
 	// Threhold filterer u;
 
 	always @(posedge clk)
-		dc_th_gate <= ( !dc_fast_acc[30] && dc_fast_acc > 31'h00FF_FFFF ) ? 1'b1 : 1'b0; 
+		dc_th_gate <= !dc_fast_acc[30] & |dc_fast_acc[29-:6];
 
 endmodule
