@@ -239,7 +239,9 @@ cos_rom[126] = 12'sd0;
 cos_rom[127] = 12'sd0;
 	end
     assign valid = 1;
-	assign cos3x = cos_rom[angle[13-:7]];
+	wire [11:0] read;
+	assign read = cos_rom[angle[13-:7]];
+	assign cos3x = { 1'b0, read[10:2], 2'b00 };
 	
 	// Correct Polarity (just negate)
 	reg signed [11:0] sin, absin;
