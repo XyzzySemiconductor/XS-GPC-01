@@ -160,6 +160,11 @@ cos_rom[31] = 9'dx;
 	// Correct Polarity (just negate)
 	reg signed [11:0] sin, absin;
 	always @(posedge clk) begin
+		if( reset ) begin
+			sin<= 0;
+			absin<= 0;
+		end
+		else
 		if( valid ) begin
 			sin   <= ( polarity ) ? ~cos3x : cos3x; // use cos as it aligns with polarity
 			absin <= cos3x;
