@@ -16,10 +16,10 @@ async def test_project(dut):
 
     # Reset
     dut.vac.value = 0;
-    dut.vdc.value = 100;
+    dut.vdc.value = 1000;
     dut._log.info("Reset")
     dut.ena.value = 1
-    dut.ui_in.value = 4
+    dut.ui_in.value = 4+8+32
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
@@ -36,12 +36,18 @@ async def test_project(dut):
     # Check that N & P never intersect
     assert int(dut.cnt_sin_np.value) == 0
 
-    # Check that each is approx 1/3 of cnt
+    # Check that each is over >  1/4 of cnt
     assert int(dut.cnt_sin_p.value) > 200000
     assert int(dut.cnt_sin_n.value) > 200000
 
+    # Check that each is under <  1/3 of cnt
     assert int(dut.cnt_sin_p.value) < 260000
     assert int(dut.cnt_sin_n.value) < 260000
+
+    # our PWM is over > 1/2, and under 3/4
+    assert int(dut.cnt_pwm.value) > 400000
+    assert int(dut.cnt_pwm.value) < 600000
+
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.

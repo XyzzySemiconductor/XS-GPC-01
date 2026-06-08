@@ -49,18 +49,20 @@ module tb ();
   );
 
   // Expand IO for easy wave viewing
-  wire sin_pwm_n, sin_pwm_p;
+  wire sin_pwm_n, sin_pwm_p, pwm;
   assign sin_pwm_p = uo_out[1];
   assign sin_pwm_n = uo_out[2];
+  assign pwm = uo_out[3];
 
   // add some simple counters for sanity check
 
   reg  [31:0] cnt;
-  reg  [31:0] cnt_sin_n, cnt_sin_p, cnt_sin_np;
+  reg  [31:0] cnt_sin_n, cnt_sin_p, cnt_sin_np, cnt_pwm;
   always @(posedge clk) begin
 	cnt <= (!rst_n)?0:cnt+1;
 	cnt_sin_p <= (!rst_n)?0:(sin_pwm_p )?cnt_sin_p +1:cnt_sin_p;
 	cnt_sin_n <= (!rst_n)?0:(sin_pwm_n )?cnt_sin_n +1:cnt_sin_n;
+	cnt_pwm   <= (!rst_n)?0:(pwm)?cnt_pwm+1:cnt_pwm;
 	cnt_sin_np<= (!rst_n)?0:(sin_pwm_n &
 							 sin_pwm_p )?cnt_sin_np+1:cnt_sin_np;
   end
