@@ -245,9 +245,9 @@ cos_rom[31] = 9'd0;
 	/////////////
 
 	// Pseduo energy is the voltage error from Vref DC
-	reg signed [30:0] dc_delta;
+	reg signed [11:0] dc_delta;
 	always @(posedge clk) begin
-		dc_delta  <= ( gate[3] ) ? dc_data - (( gate[4] ) ? 12'h800 : 0 ) : 0;; 
+		dc_delta  <= ( !gate[3] ) ? 0 : { gate[4] ^ dc_data[11], dc_data[10:0] };
 	end
 
 	// Accumdulate the delta error 'u' 
