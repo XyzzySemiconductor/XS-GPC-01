@@ -53,7 +53,7 @@ module tt_um_60hz_load(
 	wire [15:0] sin_out, cos_out;
 	wire valid, busy;
 
-//`define USE_CORDIC
+`define USE_CORDIC
 `ifdef USE_CORDIC
 	cordic_sincos_50000_core_20 i_dut(
 		.clk( clk ),
