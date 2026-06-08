@@ -98,94 +98,62 @@ module tt_um_60hz_load(
 `ifdef MAKE_ROM
     /////////////////////
 	// Build a rom
-	reg [8:0] cos_rom[63:0];
-	initial for( int ii = 0; ii < 64; ii++ ) 
+	reg [8:0] cos_rom[31:0];
+	initial for( int ii = 0; ii < 32; ii++ ) 
 		cos_rom[ii] <= 12'sd0;
 	reg [15:0] prev_angle;
 	always @(posedge clk) begin
 		prev_angle <= angle;
 		if( strobe && !angle[15] ) 
-			if( cos_rom[prev_angle[13-:6]] == 0 )  cos_rom[prev_angle[13-:6]] <= cos3x[10:2];
+			if( prev_angle[8:0] == (1<<8) )  cos_rom[prev_angle[13-:5]] <= cos3x[10:2];
 	end
 	always @(posedge clk) begin
 		if( strobe && angle == 100 && pdir == 1 && polarity == 0 ) 
-			for( int ii = 0; ii < 64; ii++ )
-			$display("cos_rom[%0d] = 12'd%0d;", ii, cos_rom[ii] );
+			for( int ii = 0; ii < 32; ii++ )
+			$display("cos_rom[%0d] = 9'd%0d;", ii, cos_rom[ii] );
 	end
 	///////////////////
 `endif
 
 `ifndef USE_CORDIC // if not cordic, then ROM
-    reg [11:0] cos_rom [127:0];
+    reg [8:0] cos_rom [31:0];
 	initial begin
-cos_rom[0] = 12'd385;
-cos_rom[1] = 12'd384;
-cos_rom[2] = 12'd384;
-cos_rom[3] = 12'd382;
-cos_rom[4] = 12'd380;
-cos_rom[5] = 12'd378;
-cos_rom[6] = 12'd375;
-cos_rom[7] = 12'd373;
-cos_rom[8] = 12'd369;
-cos_rom[9] = 12'd365;
-cos_rom[10] = 12'd361;
-cos_rom[11] = 12'd357;
-cos_rom[12] = 12'd352;
-cos_rom[13] = 12'd347;
-cos_rom[14] = 12'd341;
-cos_rom[15] = 12'd335;
-cos_rom[16] = 12'd329;
-cos_rom[17] = 12'd322;
-cos_rom[18] = 12'd315;
-cos_rom[19] = 12'd308;
-cos_rom[20] = 12'd300;
-cos_rom[21] = 12'd292;
-cos_rom[22] = 12'd284;
-cos_rom[23] = 12'd276;
-cos_rom[24] = 12'd267;
-cos_rom[25] = 12'd258;
-cos_rom[26] = 12'd249;
-cos_rom[27] = 12'd239;
-cos_rom[28] = 12'd229;
-cos_rom[29] = 12'd219;
-cos_rom[30] = 12'd209;
-cos_rom[31] = 12'd198;
-cos_rom[32] = 12'd188;
-cos_rom[33] = 12'd177;
-cos_rom[34] = 12'd166;
-cos_rom[35] = 12'd154;
-cos_rom[36] = 12'd143;
-cos_rom[37] = 12'd132;
-cos_rom[38] = 12'd120;
-cos_rom[39] = 12'd108;
-cos_rom[40] = 12'd96;
-cos_rom[41] = 12'd84;
-cos_rom[42] = 12'd72;
-cos_rom[43] = 12'd59;
-cos_rom[44] = 12'd47;
-cos_rom[45] = 12'd35;
-cos_rom[46] = 12'd22;
-cos_rom[47] = 12'd10;
-cos_rom[48] = 12'd1;
-cos_rom[49] = 12'd0;
-cos_rom[50] = 12'd0;
-cos_rom[51] = 12'd0;
-cos_rom[52] = 12'd0;
-cos_rom[53] = 12'd0;
-cos_rom[54] = 12'd0;
-cos_rom[55] = 12'd0;
-cos_rom[56] = 12'd0;
-cos_rom[57] = 12'd0;
-cos_rom[58] = 12'd0;
-cos_rom[59] = 12'd0;
-cos_rom[60] = 12'd0;
-cos_rom[61] = 12'd0;
-cos_rom[62] = 12'd0;
-cos_rom[63] = 12'd0;
+cos_rom[0] = 9'd385;
+cos_rom[1] = 9'd384;
+cos_rom[2] = 9'd380;
+cos_rom[3] = 9'd375;
+cos_rom[4] = 9'd369;
+cos_rom[5] = 9'd361;
+cos_rom[6] = 9'd352;
+cos_rom[7] = 9'd341;
+cos_rom[8] = 9'd329;
+cos_rom[9] = 9'd315;
+cos_rom[10] = 9'd300;
+cos_rom[11] = 9'd284;
+cos_rom[12] = 9'd267;
+cos_rom[13] = 9'd249;
+cos_rom[14] = 9'd229;
+cos_rom[15] = 9'd209;
+cos_rom[16] = 9'd187;
+cos_rom[17] = 9'd166;
+cos_rom[18] = 9'd143;
+cos_rom[19] = 9'd119;
+cos_rom[20] = 9'd96;
+cos_rom[21] = 9'd72;
+cos_rom[22] = 9'd47;
+cos_rom[23] = 9'd22;
+cos_rom[24] = 9'd0;
+cos_rom[25] = 9'd0;
+cos_rom[26] = 9'd0;
+cos_rom[27] = 9'd0;
+cos_rom[28] = 9'd0;
+cos_rom[29] = 9'd0;
+cos_rom[30] = 9'd0;
+cos_rom[31] = 9'd0;
 	end
     assign valid = 1;
 	wire [8:0] read;
-	assign read = cos_rom[angle[13-:6]];
+	assign read = cos_rom[angle[13-:5]];
 	assign cos3x = { 1'b0, read, 2'b00 };
 `endif // ROM not CORDIC
 	
