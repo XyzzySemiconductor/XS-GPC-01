@@ -29,9 +29,9 @@ module tt_um_60hz_load(
 	assign reset = !rst_n;
 
 	// Gate input reg CC crossing meta regs
-	reg [4:0] gate_cc, gate;
+	reg [5:0] gate_cc, gate;
 	always @(posedge clk) begin
-		gate_cc <= ui_in[6:2];
+		gate_cc <= ui_in[7:2];
 		gate <= gate_cc;
 	end
 
@@ -74,6 +74,7 @@ module tt_um_60hz_load(
 
 	reg polarity;
 	reg pdir;
+	wire quad0;
 	always @(posedge clk) begin
 		if( reset ) begin
 			angle <= 12500;
@@ -87,6 +88,7 @@ module tt_um_60hz_load(
 			end
 		end
 	end
+	assign quad0 = !polarity & !pdir;
 
 	// Multiply cos by 3: to nicely fill dynamic range
 	wire signed [11:0] cos3x;
@@ -219,7 +221,7 @@ cos_rom[31] = 9'dx;
 	reg signed [11:0] delta;
 	wire dc_very_low;
 	always @(posedge clk) 
-		delta  <= ( gate[2] && !dc_very_low ) ? ac_data - sin : 0;
+		delta  <= (( !gate[5] || quad0 ) && gate[2] && !dc_very_low ) ? ac_data - sin : 0;
 
 	// Accumdulate the delta error 'u' 
 	// Have reasonable hard clamps because it can accumulate forever
