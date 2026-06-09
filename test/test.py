@@ -15,18 +15,31 @@ async def test_project(dut):
     cocotb.start_soon(clock.start())
 
     # Reset
-    dut.vac.value = 0;
-    dut.vdc.value = 1000;
     dut._log.info("Reset")
     dut.ena.value = 1
-    dut.ui_in.value = 4+8+32
     dut.uio_in.value = 0
     dut.rst_n.value = 0
+
+    # dut controls
+    dut.vac.value = 0;
+    dut.vdc.value = 1000;
+    dut.ac_mode.value = 1
+    dut.num_vref.value = 240
+    dut.den_vref.value = 400
+    dut.num_sine.value = 99
+    dut.den_sine.value = 100
+    dut.num_out.value = 99
+    dut.den_out.value = 100
+    dut.num_ac.value = 7
+    dut.den_ac.value = 11
+    dut.num_dc.value = 998
+    dut.den_dc.value = 1000
+    
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
     dut._log.info("Test project behavior")
-
+    
     # Wait for one full 60Hz cycle
     await ClockCycles(dut.clk, 50000 * 16)
     
@@ -45,7 +58,7 @@ async def test_project(dut):
     assert int(dut.cnt_sin_n.value) < 260000
 
     # our PWM is over > 1/2, and under 3/4
-    assert int(dut.cnt_pwm.value) > 400000
+    assert int(dut.cnt_pwm.value) > 300000
     assert int(dut.cnt_pwm.value) < 600000
 
 

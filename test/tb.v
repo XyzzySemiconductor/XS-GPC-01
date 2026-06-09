@@ -20,10 +20,11 @@ module tb ();
   reg ena;
   reg [7:0] ui_in;
   reg [7:0] uio_in;
-  wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+  wire [7:0] uo_out;
   reg adc_vac, adc_vdc;
+  wire [5:0] in_pwm;
 `ifdef GL_TEST
   wire VPWR = 1'b1;
   wire VGND = 1'b0;
@@ -38,7 +39,7 @@ module tb ();
       .VGND(VGND),
 `endif
 
-      .ui_in  ({ui_in[7:2], adc_vdc, adc_vac}),    // Dedicated inputs
+      .ui_in  ({ in_pwm[5:0], adc_vdc, adc_vac}),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
       .uio_in (uio_in),   // IOs: Input path
       .uio_out(uio_out),  // IOs: Output path
@@ -98,6 +99,26 @@ module tb ();
       end
     end
 
+	//////////////////////
+    // PWM Generators
+	//////////////////////
+
+	// Ratios drive by testbench
+	logic ac_mode;
+	logic [15:0] num_vref, den_vref;
+	logic [15:0] num_sine, den_sine;
+	logic [15:0] num_out , den_out ;
+	logic [15:0] num_ac  , den_ac  ;
+	logic [15:0] num_dc  , den_dc  ;
+	logic pwm_vref, pwm_sine, pwm_out, pwm_ac, pwm_dc;
+
+	// Pwm signals
+	recip_pwm #( 16 ) i_pwm0 ( clk, !rst_n, num_vref, den_vref, pwm_vref );
+	recip_pwm #( 16 ) i_pwm1 ( clk, !rst_n, num_sine, den_sine, pwm_sine );
+	recip_pwm #( 16 ) i_pwm2 ( clk, !rst_n, num_out , den_out , pwm_out  );
+	recip_pwm #( 16 ) i_pwm3 ( clk, !rst_n, num_ac  , den_ac  , pwm_ac   );
+	recip_pwm #( 16 ) i_pwm4 ( clk, !rst_n, num_dc  , den_dc  , pwm_dc   );
+	assign in_pwm[5:0] = { ac_mode, pwm_vref, pwm_sine, pwm_out, pwm_ac, pwm_dc };
 
 endmodule
 
@@ -137,5 +158,30 @@ module lcc_adcsim (
     assign ad_out[1] = hold[1][11];
     assign ad_out[2] = hold[2][11];
     assign ad_out[3] = hold[3][11];
+endmodule
+
+module recip_pwm #(
+    parameter W = 16   // bit-width of numerator/denominator
+)(
+    input  wire         clk,
+    input  wire         rst,
+    input  wire [W-1:0] n,
+    input  wire [W-1:0] d,
+    output reg          pwm
+);
+
+    reg [W-1:0] acc;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            acc <= 0;
+            pwm <= 0;
+        end else begin
+            // accumulate numerator
+			acc <= ( acc >= d ) ? acc - d + n : acc + n;
+			pwm <= ( acc >= d ) ? 1'b1 : 1'b0;
+        end
+    end
+
 endmodule
 
