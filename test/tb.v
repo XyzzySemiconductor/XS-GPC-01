@@ -76,7 +76,7 @@ module tb ();
     // AD7352 Model     
     /////////////////////
 
-	logic [11:0] vdc, vac; // driven by testbench
+	logic [11:0] vdc, vac; // driven by model, ac via cordic
     // sim pad register of CS
     logic cs_ireg;
     always @(posedge !clk)
@@ -107,8 +107,8 @@ module tb ();
     // Cordic to drive AC
 	//////////////////////
 
-	// Driven by testbench
-	wire [15:0] phase_lead; // 50000 steps per cycle, typical 1000 = 2% lead
+	// Driven by model
+	wire signed [15:0] phase_lead; // 50000 steps per cycle, typical 1000 = 2% lead
 
 	// Otherwise this feeds the 
     reg signed [15:0] angle;
@@ -128,14 +128,15 @@ module tb ();
     wire signed [15:0] angle_new;
 
 	assign angle_ofs = angle + phase_lead;
-	assign angle_new = ( angle_ofs > 12499 ) ? angle_ofs - 25000 : angle_ofs;
+	assign angle_new = ( angle_ofs > 12499 ) ? angle_ofs - 25000 :
+                       ( angle_ofs < -12500) ? angle_ofs + 25000 : angle_ofs;
 
 	reg polarity;
 	always @(posedge clk) begin
 		if( !rst_n ) begin
 			polarity <= 0;
 		end else if ( cs_ireg ) begin
-			polarity <= ( angle_new == 12499 ) ? !polarity : polarity;
+			polarity <= ( angle_new >= 12499 ) ? !polarity : polarity;
 		end
 	end
 
@@ -163,7 +164,7 @@ module tb ();
 
 	// Ratios drive by testbench
 	logic ac_mode;
-	logic [15:0] num_vref, den_vref;
+	logic [15:0] num_vref, den_vref; // from system model
 	logic [15:0] num_sine, den_sine;
 	logic [15:0] num_out , den_out ;
 	logic [15:0] num_ac  , den_ac  ;
@@ -178,6 +179,60 @@ module tb ();
 	recip_pwm #( 16 ) i_pwm4 ( clk, !rst_n, num_dc  , den_dc  , pwm_dc   );
 	assign in_pwm[5:0] = { ac_mode, pwm_vref, pwm_sine, pwm_out, pwm_ac, pwm_dc };
 
+	
+	//////////////////////
+    // Plant Model
+	//////////////////////
+	// With testbench control inputs and the dump PWM
+    // The model based around capacitor enery storage
+    // responds and provides Vac and Vdc readings and a phase angle contrl
+   
+	localparam R = 12.0; // Ohms
+	localparam C = 200.0; // Uf
+	localparam F = 48000000.0; // Clock 48 Mhz
+
+	// with testbench inputs of:
+	//  Grid power Pgrid = total gen - load (watts real)
+	//  Vref 
+	// with chip inputs of:
+	//  PWM for the dump
+	// Calculates:
+	//  Dump power pdump = Vcap * Vcap / R
+	//  Capacitor energy Ecap change dt*(Pgrid - Pdump)
+	//  DCLink Voltage Vcap = fn( Ecap, C )
+    //  phase lead = fn( Vcap - Vref )
+	// Signed digitcal outputs
+	//  Phase_lead (+/-12500)
+    //  Vdc[11:0], 
+
+	// Model input from TB
+	real pgrid; // watts
+	real vref; // volts
+
+	real vcap; // volts
+	real ecap; // Joules
+	real pdump; // watts
+	real lead; // degrees
+
+	always @(negedge clk) begin
+		if( !rst_n) begin
+			vcap = 0.0;
+			ecap = 0.0;
+			pdump = 0.0;	
+		    lead = 0.0;
+		end else begin
+			pdump <= ( !pwm ) ? 0.0 : 1.0 * vcap * vcap / R;
+			ecap  <= ecap + (( pgrid - pdump ) / F);
+			vcap  <= $sqrt( 2000000.0 * ecap / C );
+			lead <= ( vcap - vref ) * 90.0 / 400.0;
+		end
+	end
+			
+	// Scaled model outputs:
+	assign vdc[11:0] = ( vcap * 1744.0 / 340.0 ); 
+	assign phase_lead = ( lead * 12500.0 / 90.0 );
+	assign num_vref = vref*10.0;
+	assign den_vref = 4000;
 endmodule
 
 // external adc sim block
@@ -242,4 +297,3 @@ module recip_pwm #(
     end
 
 endmodule
-

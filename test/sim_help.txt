@@ -1,3 +1,2 @@
 make -B WAVES=1 COCOTB_RESOLVE_X=RANDOM
-make SIM=verilator VERILATOR_FLAGS="--Wno-fatal --Wno-WIDTH --Wno-UNOPTFLAT --Wno-UNUSED"
-
+make -B WAVES=1 SIM=verilator EXTRA_ARGS="--trace-fst --trace --Wno-fatal --Wno-WIDTH --Wno-UNOPTFLAT --Wno-UNUSED --error-limit 0"
