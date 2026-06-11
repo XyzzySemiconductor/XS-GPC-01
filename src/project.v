@@ -219,7 +219,7 @@ cos_rom[31] = 9'dx;
 
 	// Pseduo energy is the voltage error from leading AC, ie phase error from generator energy
 	reg signed [11:0] delta;
-	wire dc_very_low;
+	reg dc_very_low;
 	always @(posedge clk) 
 		delta  <= (( !gate[5] || quad0 ) && gate[2] && !dc_very_low ) ? ac_data - sin : 0;
 
@@ -232,7 +232,7 @@ cos_rom[31] = 9'dx;
 		if( reset ) begin
 			fast_acc <= 0;
 		end else begin
-			fast_acc <= ( next_acc[25] != next_acc[24] ) ? {next_acc[25], {25{~next_acc[25]}}} : next_acc;
+			fast_acc <= ( next_acc[25] != next_acc[24] ) ? {{2{next_acc[25]}}, {25{~next_acc[25]}}} : next_acc;
 		end
 	end
 
@@ -260,11 +260,13 @@ cos_rom[31] = 9'dx;
 		if( reset ) begin
 			dc_fast_acc <= 0;
 		end else begin
-			dc_fast_acc <= ( dc_next_acc[30] != dc_next_acc[29] ) ? {dc_next_acc[30], {30{~dc_next_acc[30]}}} : dc_next_acc;
+			dc_fast_acc <= ( dc_next_acc[30] != dc_next_acc[29] ) ? {{2{dc_next_acc[30]}}, {29{~dc_next_acc[30]}}} : dc_next_acc;
 		end
 	end
 
-	assign dc_very_low = dc_fast_acc[30] & !dc_fast_acc[28];
+	always @(posedge clk)
+		dc_very_low <= ( reset ) ? 1'b1 : ( !dc_very_low && dc_fast_acc[30] && !dc_fast_acc[28] ) ? 1'b1 : 
+                                          (  dc_very_low && dc_th_gate ) ? 1'b0 : dc_very_low ;
 
 	// Low pass filter u : TBD
 
