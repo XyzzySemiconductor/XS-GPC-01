@@ -61,5 +61,9 @@ async def test_project(dut):
     # Wait for one full 60Hz cycle
     await ClockCycles(dut.clk, 13 * 50000 * 16)
 
+    # Test if Vdc is under control
+    assert int(dut.vdc.value) < 1765
+    assert int(dut.vdc.value) > 1735
+
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.
