@@ -38,7 +38,7 @@ always @(posedge clk)
 	ad_ireg <= ad_sdata;
 
 // Data input shift regisers MSB first
-reg [11:0] ad_sreg0, ad_sreg1;;
+reg [11:0] ad_sreg0, ad_sreg1;
 always @(posedge clk) begin
   if( reset ) begin
 	ad_sreg0 <= 0;
