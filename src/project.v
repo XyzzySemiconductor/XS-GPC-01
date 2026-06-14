@@ -227,7 +227,7 @@ cos_rom[31] = 9'dx;
 	// Have reasonable hard clamps because it can accumulate forever
 	reg signed [25:0] fast_acc;
 	wire signed [25:0] next_acc;
-	assign next_acc = fast_acc + delta - (( !fast_acc[25] && (|fast_acc[24-:5]) ) ? absin : 'sd0 );
+	assign next_acc = fast_acc + (delta<<<2) - (( !fast_acc[25] && (|fast_acc[24-:5]) ) ? absin : 'sd0 );
 	always @(posedge clk) begin
 		if( reset ) begin
 			fast_acc <= 0;

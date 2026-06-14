@@ -25,7 +25,7 @@ async def test_project(dut):
     dut.den_sine.value = 100
     dut.num_out.value = 99
     dut.den_out.value = 100
-    dut.num_ac.value = 99
+    dut.num_ac.value = 25
     dut.den_ac.value = 100
     dut.num_dc.value = 999
     dut.den_dc.value = 1000
