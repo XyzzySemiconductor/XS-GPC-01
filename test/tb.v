@@ -108,7 +108,7 @@ module tb ();
 	//////////////////////
 
 	// Driven by model
-	wire signed [15:0] phase_lead; // 50000 steps per cycle, typical 1000 = 2% lead
+	reg  signed [15:0] phase_lead; // 50000 steps per cycle, typical 1000 = 2% lead
 
 	// Otherwise this feeds the 
     reg signed [15:0] angle;
@@ -183,6 +183,33 @@ module tb ();
 	//////////////////////
     // Plant Model
 	//////////////////////
+
+`define INT_MODEL
+`ifdef INT_MODEL
+	real pgrid; // driven by testbench
+	logic signed [15:0] pgrid_int;
+	assign pgrid_int = int'( pgrid * 1544.0 / 340.0 );
+	dclink_model i_dclink (
+		.clk	( clk ),
+		.reset 	( !rst_n ),
+		// Model Inputs
+		.pnet		( pgrid_int ),  // input Grid net power (gens-loads)
+		.pwm		( pwm ),	// Dump PWM
+		// Model Outputs
+		.vdc		( vdc ) 	// DC Link Voltage
+	);
+	// Handle Vref
+	real vref; // driven by testbench in volts
+	logic signed [11:0] vref_int;
+	assign vref_int = int'( vref * 1544.0 / 340.0 );
+	assign num_vref = vref_int;
+	assign den_vref = 2048;
+
+	// Driven by difference from target voltage to get some reactivity on AC. 
+	always @(posedge clk) 
+		phase_lead  <= ( vdc - vref_int ) * int'( 12500.0 / 1544.0 ); // 340v error is 90 degrees phase shift
+`else
+
 	// With testbench control inputs and the dump PWM
     // The model based around capacitor enery storage
     // responds and provides Vac and Vdc readings and a phase angle contrl
@@ -230,10 +257,11 @@ module tb ();
 	end
 			
 	// Scaled model outputs:
-	assign vdc[11:0] = ( vcap > 399.0 ) ? ( 399.0 * 1744.0 / 340.0 ) : ( vcap * 1744.0 / 340.0 ); 
+	assign vdc[11:0] = ( vcap > 399.0 ) ? ( 399.0 * 1544.0 / 340.0 ) : ( vcap * 1544.0 / 340.0 ); 
 	assign phase_lead = ( lead * 12500.0 / 90.0 );
 	assign num_vref = vref*10.0;
 	assign den_vref = 4000;
+`endif
 endmodule
 
 // external adc sim block
