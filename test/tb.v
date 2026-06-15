@@ -2,12 +2,15 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
+
+
 /* This testbench just instantiates the module and makes some convenient wires
    that can be driven / tested by the cocotb test.py.
 */
 // for gate level tests we need a local cordic
 `ifdef GL_TEST
 `include "cordic.sv"
+`include "dclink_model.sv"
 `endif
 
 module tb ();
