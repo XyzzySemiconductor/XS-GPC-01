@@ -10,8 +10,8 @@
 // for gate level tests we need a local cordic
 `ifdef GL_TEST
 `include "cordic.sv"
-`include "dclink_model.sv"
 `endif
+`include "dclink_model.sv"
 
 module tb ();
 
