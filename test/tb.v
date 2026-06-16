@@ -137,7 +137,7 @@ module tb ();
 	reg polarity;
 	always @(posedge clk) begin
 		if( !rst_n ) begin
-			polarity <= 0;
+			polarity <= 1;
 		end else if ( cs_ireg ) begin
 			polarity <= ( angle_new == 12499 ) ? !polarity : polarity;
 		end
