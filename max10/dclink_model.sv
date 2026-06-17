@@ -23,7 +23,7 @@
 	reg [10:0] dtocv_rom [63:0]; // tiny
 	integer ii;
 	initial begin
-		for( int ii = 0; ii < 63; ii++ ) begin
+		for( int ii = 0; ii < 64; ii++ ) begin
 			dtocv_rom[ii] = ( 67108864.0 * 1544.0 / ( C * F * (ii * 32.0 + 16) * 340.0 ));
 			// synopsys translate_off
 			$display("dtocv[ %0d ] = %0d", ii, dtocv_rom[ii] );
