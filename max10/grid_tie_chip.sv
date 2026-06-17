@@ -167,6 +167,8 @@ module grid_tie_chip
   assign pwm_sin_n = uo_out[2];
   assign pwm_dump  = uo_out[3];
 
+  assign speaker = button & (pwm_sin_p | pwm_sin_n);
+  
   // ADC simulated IO
   logic adc_cs, adc_sdata_vac, adc_sdata_vdc;
   
