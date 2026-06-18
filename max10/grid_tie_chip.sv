@@ -602,7 +602,16 @@ module grid_tie_chip
 		end
 	end
 	
-	assign pgrid = awaddr[24:23] * 454 + 454;  // aprox 100w per 1/4 sec
+	always @(posedge clk) 
+		pgrid <= ( awaddr[24:22] == 0 ) ? 2 * 454 :  // aprox 100w per 1/4 sec
+		         ( awaddr[24:22] == 1 ) ? 4 * 454 :  // 000 W
+		         ( awaddr[24:22] == 2 ) ? 1 * 454 :  // 000 W
+		         ( awaddr[24:22] == 3 ) ? 2 * 454 :  // 100 W
+		         ( awaddr[24:22] == 4 ) ? 4 * 454 :  // 200 W
+		         ( awaddr[24:22] == 5 ) ? 8 * 454 :  // 400 W
+		         ( awaddr[24:22] == 6 ) ? 16 * 454 :  // 800 W
+		         ( awaddr[24:22] == 7 ) ? 32 * 454 :0;// 000 W
+					
 	
 	/////////////////////////////////
 	////
