@@ -93,8 +93,6 @@ The chip maintains long‑term phase and amplitude alignment by modulating the d
 
 ![Development Board](dev_board.png)
 
-![Max10 Fpga Simulation](1d23834.png)
-
 ## Why is it?
 
 Use my 10kw grid-tied solar system to power my home on the second day of a power outage.
