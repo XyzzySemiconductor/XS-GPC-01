@@ -331,7 +331,8 @@ module grid_tie_chip
 	logic [2:0] tidx; // driven by test bench
 	logic signed [11:0] eprobe; // driven by test.
 	
-`define TEST_2
+`define TEST_2 // select the test
+
 `ifdef TEST_1 // Simple steps in power
 	// Set Vref 
 	assign vref = 1544; // 340 V
@@ -359,7 +360,7 @@ module grid_tie_chip
 	// Set Vref 
 	assign vref = 1544; // 340 V
 	// Assign grid power
-	assign pgrid = 8 * 454; //800W
+	assign pgrid = 60 * 454; //6kW
 	// Time varing DC gain
 	assign den_dc   =   97;	// 1/4 
 	always @(posedge clk) 
@@ -369,7 +370,7 @@ module grid_tie_chip
 		          ( tidx == 3 ) ? 50 :  // 1/2
 		          ( tidx == 4 ) ? 60 :  // 
 		          ( tidx == 5 ) ? 70 :  // 3/4
-		          ( tidx == 6 ) ? 20 :  // 
+		          ( tidx == 6 ) ? 80 :  // 
 		          ( tidx == 7 ) ? 10 :0;// 
 	// Assign PWM input ratios
 	assign num_sin  =  71; 	assign den_sin  =   73; 
@@ -381,7 +382,32 @@ module grid_tie_chip
 	always @(posedge clk)
 		eprobe <= { 1'b0, num_dc[6:0], 4'b0000 };
 `endif
-
+`ifdef TEST_3 // test effect of A Gain 
+	// Set Vref 
+	assign vref = 1544; // 340 V
+	// Assign grid power
+	assign pgrid = 60 * 454; //6kW
+	// Time varing DC gain
+	assign den_ac   =   199;	// 1/4 
+	always @(posedge clk) 
+		num_ac <= ( tidx == 0 ) ? 25 :  // startup on gain 1/8
+		          ( tidx == 1 ) ? 25 :  // 
+		          ( tidx == 2 ) ? 12 :  // 
+		          ( tidx == 3 ) ? 50 :  // 1/2
+		          ( tidx == 4 ) ? 75 :  // 
+		          ( tidx == 5 ) ? 100 :  // 3/4
+		          ( tidx == 6 ) ? 150 :  // 
+		          ( tidx == 7 ) ? 175 :0;// 
+	// Assign PWM input ratios
+	assign num_sin  =  71; 	assign den_sin  =   73; 
+	assign num_out  =  97;	assign den_out  =  101;
+	//assign num_ac   =  25; 	assign den_ac   =  199; // 1/8
+	assign num_dc   =  95;	assign den_dc   =   97;	// 4x
+	assign num_vref =vref;	assign den_vref = 2048;
+	// Connect up Probe
+	always @(posedge clk)
+		eprobe <= { 1'b0, num_ac[6:0], 4'b0000 };
+`endif
 
 	//////////////////////////////
    // SIM to VID connections
