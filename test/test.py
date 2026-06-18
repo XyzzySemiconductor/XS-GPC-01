@@ -26,9 +26,9 @@ async def test_project(dut):
     dut.num_out.value = 99
     dut.den_out.value = 100
     dut.num_ac.value = 25
-    dut.den_ac.value = 100
-    dut.num_dc.value = 999
-    dut.den_dc.value = 1000
+    dut.den_ac.value = 193
+    dut.num_dc.value = 25
+    dut.den_dc.value = 97
     dut.vref.value = 340.0
     dut.pgrid.value = 100.0
     
@@ -58,12 +58,12 @@ async def test_project(dut):
     #assert int(dut.cnt_pwm.value) > 300000
     #assert int(dut.cnt_pwm.value) < 600000
 
-    # Wait for one full 60Hz cycle
-    await ClockCycles(dut.clk, 13 * 50000 * 16)
+    # Wait 60Hz cycles for cap charge and run in control
+    await ClockCycles(dut.clk, 10 * 50000 * 16)
 
     # Test if Vdc is under control
-    assert int(dut.vdc.value) < 1570
-    assert int(dut.vdc.value) > 1530
+    assert int(dut.vdc.value) < 1575
+    assert int(dut.vdc.value) > 1544
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.

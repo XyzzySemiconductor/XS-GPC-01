@@ -234,12 +234,14 @@ cos_rom[31] = 9'dx;
 	// Have reasonable hard clamps because it can accumulate forever
 	reg signed [25:0] fast_acc;
 	wire signed [25:0] next_acc;
-	assign next_acc = fast_acc + (delta<<<2) - (( !fast_acc[25] && (|fast_acc[24-:5]) ) ? absin : 'sd0 );
+	assign next_acc = fast_acc + (delta<<<3) - (( !fast_acc[25] && (|fast_acc[24-:5]) ) ? absin : 'sd0 );
 	always @(posedge clk) begin
 		if( reset ) begin
 			fast_acc <= 0;
 		end else begin
-			fast_acc <= ( next_acc[25] != next_acc[24] ) ? {{2{next_acc[25]}}, {24{~next_acc[25]}}} : next_acc;
+			//fast_acc <= ( next_acc[25] != next_acc[24] ) ? {{2{next_acc[25]}}, {24{~next_acc[25]}}} : next_acc;
+			fast_acc <= ( !next_acc[25] &&    next_acc[24]    ) ? 26'h0FFFFFF : 
+			            (  next_acc[25] && !(&next_acc[24-:5])) ? 26'h3F00000 : next_acc;
 		end
 	end
 
@@ -262,7 +264,7 @@ cos_rom[31] = 9'dx;
 	// Have reasonable hard clamps because it can accumulate forever
 	reg signed [30:0] dc_fast_acc;
 	wire signed [30:0] dc_next_acc;
-	assign dc_next_acc = dc_fast_acc + dc_delta - ((!dc_fast_acc[30] & |dc_fast_acc[29-:6] ) ? absin : 0 );
+	assign dc_next_acc = dc_fast_acc + (dc_delta<<<2) - ((!dc_fast_acc[30] & |dc_fast_acc[29-:6] ) ? absin : 0 );
 	always @(posedge clk) begin
 		if( reset ) begin
 			dc_fast_acc <= 0;
