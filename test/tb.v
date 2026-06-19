@@ -61,6 +61,11 @@ module tb ();
   assign sin_pwm_p = uo_out[1];
   assign sin_pwm_n = uo_out[2];
   assign pwm = uo_out[3];
+  wire ac_under, ac_over, dc_under, dc_over;
+  assign ac_under = uo_out[4];
+  assign ac_over  = uo_out[5];
+  assign dc_under = uo_out[6];
+  assign dc_over  = uo_out[7];
 
   // add some simple counters for sanity check
 

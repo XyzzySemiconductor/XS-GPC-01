@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Thu Jun 11 20:50:41 2026
+[*] Fri Jun 19 18:04:57 2026
 [*]
 [dumpfile] "/foss/designs/grid_tie/test/tb.fst"
-[dumpfile_mtime] "Thu Jun 11 20:37:24 2026"
-[dumpfile_size] 604140131
+[dumpfile_mtime] "Fri Jun 19 18:01:37 2026"
+[dumpfile_size] 370344259
 [savefile] "/foss/designs/grid_tie/test/my.gtkw"
-[timestart] 77110000000000
-[size] 1318 827
+[timestart] 13810000000000
+[size] 1543 913
 [pos] -1 -1
-*-42.080059 84722490000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-43.712944 65981980000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -38,15 +38,13 @@
 [markername] ZZ
 [treeopen] tb.
 [sst_width] 228
-[signals_width] 236
+[signals_width] 269
 [sst_expanded] 1
-[sst_vpaned_height] 378
+[sst_vpaned_height] 427
 @420
 tb.angle[15:0]
-@22
 tb.angle_ofs[15:0]
 tb.angle_new[15:0]
-@420
 tb.cnt_pwm[31:0]
 @8420
 tb.cos3x[11:0]
@@ -63,7 +61,6 @@ tb.user_project.ac_data[11:0]
 -
 @28
 tb.user_project.dc_very_low
-tb.polarity
 @8420
 tb.user_project.dc_data[11:0]
 @28
@@ -71,7 +68,7 @@ tb.user_project.dc_th_gate
 tb.user_project.quad0
 @8420
 tb.user_project.delta[11:0]
-@8022
+@8421
 tb.user_project.fast_acc[25:0]
 @28
 tb.user_project.th_gate
@@ -87,17 +84,29 @@ tb.vdc[11:0]
 [color] 3
 tb.user_project.dc_delta[11:0]
 @8420
-[color] 3
 tb.user_project.dc_fast_acc[30:0]
 >30000000
 tb.user_project.absin_err[19:0]
 >0
-tb.ecap
-tb.vcap
 tb.phase_lead[15:0]
 tb.vac[11:0]
 @28
 tb.polarity
+tb.polarity
 tb.pwm
+@8420
+tb.user_project.absin[11:0]
+tb.user_project.sin[11:0]
+tb.vac[11:0]
+tb.vdc[11:0]
+tb.angle[15:0]
+tb.user_project.angle[15:0]
+@28
+tb.user_project.polarity
+tb.polarity
+tb.ac_over
+tb.ac_under
+tb.dc_over
+tb.dc_under
 [pattern_trace] 1
 [pattern_trace] 0

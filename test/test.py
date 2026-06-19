@@ -64,6 +64,11 @@ async def test_project(dut):
     # Test if Vdc is under control
     assert int(dut.vdc.value) < 1575
     assert int(dut.vdc.value) > 1544
+    # Test Status flags not asserted
+    assert int(dut.ac_over.value)==0
+    assert int(dut.ac_under.value)==0
+    assert int(dut.dc_over.value)==0
+    assert int(dut.dc_under.value)==0
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.
