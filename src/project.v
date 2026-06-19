@@ -25,7 +25,6 @@ module tt_um_60hz_load(
 );
 
   // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out[7:4]  = 0; 
   assign uio_out = 0;
   assign uio_oe  = 0;
 
@@ -295,6 +294,23 @@ cos_rom[31] = 9'dx;
 			ac_acc <= fast_acc[24-:12];
 	end
 `endif
-
-
+	reg ac_over, ac_under;
+	reg dc_over, dc_under;
+	always @(posedge clk) begin
+		if( reset ) begin
+			ac_over <= 0;
+			ac_under<= 0;
+			dc_over <= 0;
+			dc_under<= 0;
+		end else begin
+			dc_over <= ( !dc_next_acc[30] &&    dc_next_acc[29]     ) ? 1'b1 : (  dc_next_acc[30] ) ? 1'b0 : dc_over;
+			dc_under<= (  dc_next_acc[30] && !(&dc_next_acc[29-:6]) ) ? 1'b1 : ( !dc_next_acc[30] ) ? 1'b0 : dc_under;
+			ac_over <= ( !   next_acc[25] &&       next_acc[24]     ) ? 1'b1 : (     next_acc[25] ) ? 1'b0 : ac_over;
+			ac_under<= (     next_acc[25] && !(&   next_acc[24-:5]) ) ? 1'b1 : ( !   next_acc[25] ) ? 1'b0 : ac_under;
+		end
+	end
+  	assign uo_out[4]  = ac_under;
+  	assign uo_out[5]  = ac_over;
+  	assign uo_out[6]  = dc_under;
+  	assign uo_out[7]  = dc_over;
 endmodule
